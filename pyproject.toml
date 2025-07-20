@@ -1,0 +1,17 @@
+[project]
+name = "field-nice-gui"
+version = "0.0.1"
+description = "A GUI project for field-nice"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "countryinfo",
+    "nicegui",
+    "pycountry",
+    "numpy",
+    "pyyaml",
+    "matplotlib",
+]
+
+[tool.uv]
+package = true
