@@ -7,5 +7,11 @@ pip install -r requirements.txt
 
 # Run
 ```bash
-python app.py [dark]
+python app.py
+```
+
+Or
+
+```bash
+python app.py dark
 ```
