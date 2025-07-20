@@ -276,8 +276,8 @@ class ThreeImageViewer:
                 .classes(f'flex-[{ratio[2]}]') \
                 .props('fit=contain')
 
-    def set_images(self, left, middle, right, fallback=''):
-        """Set image sources. If a path doesn't exist (for local files), fallback is used."""
-        self.left_img.set_source(left if Path(left).exists() else fallback)
-        self.middle_img.set_source(middle if Path(middle).exists() else fallback)
-        self.right_img.set_source(right if Path(right).exists() else fallback)
+    def set_images(self, left, middle, right, fallbacks):
+        """Set image sources. If a path doesn't exist, fallbacks are used."""
+        self.left_img.set_source(left if Path(left).exists() else fallbacks[0])
+        self.middle_img.set_source(middle if Path(middle).exists() else fallbacks[1])
+        self.right_img.set_source(right if Path(right).exists() else fallbacks[2])

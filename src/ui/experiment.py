@@ -604,11 +604,14 @@ def _on_change_experiment_number(_=None):
             CM["number_y"].value += CM["number_inc_y"].value
 
     # 4. Preview
+    fallbacks = ["src/ui/defaults/placeholder.png"] * 3
+    if number == 1:
+        fallbacks[0] = ""  # Experiment 0 is not allowed
     CM["previewer"].set_images(
         folder.parent / f"experiment_{number - 1:04d}/placeholder.png",
         folder.parent / f"experiment_{number:04d}/placeholder.png",
         folder.parent / f"experiment_{number + 1:04d}/placeholder.png",
-        fallback="src/ui/defaults/placeholder.png"
+        fallbacks=fallbacks
     )
 
 
