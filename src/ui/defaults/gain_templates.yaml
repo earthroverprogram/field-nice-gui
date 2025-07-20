@@ -1,0 +1,131 @@
+Bypass:
+  note: |
+    Bypass gain set
+        •  Useful if you want to set gains on device
+        •  You don’t need to change anything below
+  front_code: |
+    param = None
+  back_code: |
+    def compute_gain_factory(param):
+        def compute_gain(distances):
+            return [None] * len(distances)
+        return compute_gain
+  validate_code: |
+    def validate_param(param):
+        if param is not None:
+            return "`param` for Bypass must be `None`"
+
+Constant:
+  note: |
+    Constant gain
+        •  You can change the gain value below (e.g. 5.0, 10.0)
+  front_code: |
+    param = 10.0
+  back_code: |
+    def compute_gain_factory(param):
+        def compute_gain(distances):
+            return [param] * len(distances)
+        return compute_gain
+  validate_code: |
+    def validate_param(param):
+        if not isinstance(param, (int, float)):
+            return "`param` must be a number (int or float)"
+
+Step:
+  note: |
+    Step gain mapping
+        •  List of (distance threshold, gain)
+        •  Values apply in piecewise steps based on threshold
+  front_code: |
+    param = [
+        (0, -2.0),
+        (30, 10.0),
+        (100, 24.0)
+    ]
+  back_code: |
+    def compute_gain_factory(param):
+        def compute_gain(distances):
+            param_sorted = sorted(param)
+            gains = []
+            for d in distances:
+                for threshold, gain in reversed(param_sorted):
+                    if d >= threshold:
+                        gains.append(gain)
+                        break
+            return gains
+        return compute_gain
+  validate_code: |
+    def validate_param(param):
+        if not isinstance(param, list) or len(param) < 1:
+            return "`param` must be a list with at least one (distance, gain) pair"
+        for item in param:
+            if not isinstance(item, (tuple, list)) or len(item) != 2:
+                return "Each item in `param` must be a tuple/list of two numbers"
+
+Piecewise Linear:
+  note: |
+    Piecewise linear interpolation
+        •  Specify multiple (distance, gain) points
+        •  Interpolates between them and extrapolates beyond ends
+  front_code: |
+    param = [
+        (10, -4),
+        (100, 18),
+        (300, 25)
+    ]
+  back_code: |
+    def compute_gain_factory(param):
+        def compute_gain(distances):
+            if not param:
+                return [None] * len(distances)
+            param_sorted = sorted(param)
+            xs, ys = zip(*param_sorted)
+            def interp(d):
+                if d <= xs[0]:
+                    x0, y0, x1, y1 = xs[0], ys[0], xs[1], ys[1]
+                elif d >= xs[-1]:
+                    x0, y0, x1, y1 = xs[-2], ys[-2], xs[-1], ys[-1]
+                else:
+                    for i in range(1, len(xs)):
+                        if d < xs[i]:
+                            x0, y0, x1, y1 = xs[i-1], ys[i-1], xs[i], ys[i]
+                            break
+                slope = (y1 - y0) / (x1 - x0)
+                return y0 + slope * (d - x0)
+            return [interp(d) for d in distances]
+        return compute_gain
+  validate_code: |
+    def validate_param(param):
+        if not isinstance(param, list) or len(param) < 2:
+            return "`param` must be a list with at least two (distance, gain) pairs"
+        for item in param:
+            if not isinstance(item, (tuple, list)) or len(item) != 2:
+                return "Each item in `param` must be a tuple/list of two numbers"
+
+Geometric spreading (physics-based):
+  note: |
+    Physics-based gain model
+        •  Based on geometric spreading formula
+        •  You can change the reference distance and gain
+  front_code: |
+    param = {
+        "d0": 10.0,
+        "gain0": -4.0
+    }
+  back_code: |
+    def compute_gain_factory(param):
+        import numpy as np
+        d0 = param['d0']
+        gain0 = param['gain0']
+        def compute_gain(distances):
+            distances = np.maximum(np.array(distances), 1e-3)
+            return (gain0 + 20 * np.log10(distances / d0)).tolist()
+        return compute_gain
+  validate_code: |
+    def validate_param(param):
+        if not isinstance(param, dict):
+            return "`param` must be a dict with keys 'd0' and 'gain0'"
+        if 'd0' not in param or 'gain0' not in param:
+            return "`param` must contain keys 'd0' and 'gain0'"
+        if not isinstance(param['d0'], (int, float)) or not isinstance(param['gain0'], (int, float)):
+            return "`d0` and `gain0` must be numeric"

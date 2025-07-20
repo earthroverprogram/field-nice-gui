@@ -1,0 +1,69 @@
+{
+  "device": [
+    "Dummy",
+    "EVO-16"
+  ],
+  "datatype": [
+    "Int16",
+    "Int32",
+    "Float32"
+  ],
+  "excitation": [
+    "Hammer",
+    "Airgun"
+  ],
+  "coupling": [
+    "Plate",
+    "Spike",
+    "None"
+  ],
+  "direction": [
+    "+X",
+    "-X",
+    "+Y",
+    "-Y",
+    "+Z",
+    "-Z"
+  ],
+  "weather": [
+    "Sunny",
+    "Cloudy",
+    "Rainy",
+    "Snow"
+  ],
+  "temperature": [
+    "Freezing",
+    "Cold",
+    "Mild",
+    "Warm",
+    "Hot"
+  ],
+  "moisture": [
+    "Dry",
+    "Moist",
+    "Wet"
+  ],
+  "texture": [
+    "Sand",
+    "Silt",
+    "Clay"
+  ],
+  "order": [
+    "Alfisol",
+    "Ultisol",
+    "Entisol"
+  ],
+  "agriculture": [
+    "Conventional",
+    "Organic"
+  ],
+  "crop": [
+    "Corn",
+    "Wheat",
+    "Rice"
+  ],
+  "cultivation": [
+    "Tillage",
+    "No-till"
+  ]
+}

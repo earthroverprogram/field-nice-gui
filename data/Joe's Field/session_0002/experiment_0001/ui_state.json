@@ -1,0 +1,23 @@
+{
+  "number": 1,
+  "source_location": {
+    "x": -10,
+    "y": 5,
+    "increment_x": 10,
+    "increment_y": 0
+  },
+  "operators": {
+    "computer": "A",
+    "source": "B",
+    "protocol": "",
+    "others": ""
+  },
+  "gain": {
+    "template": "Geometric spreading (physics-based)",
+    "code_param": "# Only provide `param` here\nparam = {\n    \"d0\": 10.0,\n    \"gain0\": -4.0\n}\n",
+    "overwrite": {}
+  },
+  "pre_notes": "An experiment example.",
+  "post_notes": "",
+  "create_time": "2025-07-19T20:00:56"
+}

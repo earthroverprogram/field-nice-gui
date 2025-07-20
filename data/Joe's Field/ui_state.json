@@ -1,0 +1,15 @@
+{
+  "name": "Joe's Field",
+  "location": {
+    "country": "United Kingdom",
+    "subdivision": "Shropshire",
+    "locality": "Happer Adams"
+  },
+  "origin": {
+    "lat": 52.78,
+    "lon": -2.43,
+    "heading": 45.0
+  },
+  "notes": "A LICS example.",
+  "create_time": "2025-07-13T12:12:53"
+}
