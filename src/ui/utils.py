@@ -178,7 +178,7 @@ class MyUI:
 
     @staticmethod
     def gray_color():
-        return "#B0B0B0" if GS.dark_mode else "#737373"
+        return "#B0B0B0" if GS.dark_mode else "#666666"
 
     @staticmethod
     def row(gap=4):
