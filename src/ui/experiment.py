@@ -231,8 +231,8 @@ def _plot_summary(fig, layout_dict):
 
     # --- Colorbar on top ---
     sm = ScalarMappable(norm=norm, cmap=cmap)
-    cbar = fig.colorbar(sm, ax=ax, shrink=0.7, orientation="horizontal",
-                        location="top", pad=0.05)
+    cbar = fig.colorbar(sm, ax=ax, shrink=0.7, orientation="vertical",
+                        location="right", pad=0.05)
     cbar.set_label("Gain (dB)")
 
     # --- Margin ---
