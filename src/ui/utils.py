@@ -177,6 +177,10 @@ class MyUI:
         return '#FCAE1E' if GS.dark_mode else '#2e7d32'
 
     @staticmethod
+    def gray_color():
+        return "#B0B0B0" if GS.dark_mode else "#737373"
+
+    @staticmethod
     def row(gap=4):
         """ui.row() with full width and gap."""
         return ui.row().classes(f'w-full justify-between gap-{gap}')
@@ -199,7 +203,7 @@ class MyUI:
     @contextmanager
     def cap_card(caption: str, full=True, highlight=False):
         """Card with a floating caption."""
-        ft_color = MyUI.primary_color() if highlight else ("#B0B0B0" if GS.dark_mode else "#757575")
+        ft_color = MyUI.primary_color() if highlight else MyUI.gray_color()
         card_classes = 'w-full' if full else 'flex-1'
         card_style = 'border-color: var(--q-primary);' if highlight else ''
         label_classes = 'absolute -top-2.5 left-4 q-px-sm'

@@ -54,7 +54,6 @@ ui.add_head_html('''
 ''')
 
 # Global readonly visual override
-readonly_color = "rgba(255, 255, 255, 0.6)" if GS.dark_mode else "rgba(0, 0, 0, 0.6)"
 ui.add_head_html('''
 <style>
 .q-field--readonly .q-field__native,
@@ -62,7 +61,7 @@ ui.add_head_html('''
     color: %s !important;
 }
 </style>
-''' % readonly_color)
+''' % MyUI.gray_color())
 
 # ------------------------
 # Main tab bar (centered)
