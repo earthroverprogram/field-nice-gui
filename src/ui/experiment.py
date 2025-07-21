@@ -717,10 +717,10 @@ def _initialize_experiment_ui(_=None):
                 )
             with ui.column().classes("flex-1"):
                 with MyUI.row():
-                    CM["select_session"] = ui.input("Under Session", value=session).classes('flex-1')
-                    CM["select_lics"] = ui.input("Under LICS", value=lics).classes('flex-1')
-                    CM.update("select_session", props="readonly")
-                    CM.update("select_lics", props="readonly")
+                    CM["select_session"] = ui.input("Under Session", value=session). \
+                        props("readonly").classes('flex-1')
+                    CM["select_lics"] = ui.input("Under LICS", value=lics). \
+                        props("readonly").classes('flex-1')
 
         with MyUI.row():
             ###################
@@ -809,11 +809,11 @@ def _initialize_experiment_ui(_=None):
                                 class="w-full max-w-[80px]"
                                 v-model.number="props.row.gain"
                                 :step="0.1"
-                                :%s="props.row.lock_gain || props.row.bypass"
+                                :readonly="props.row.lock_gain || props.row.bypass"
                                 @update:model-value="() => $parent.$emit('_on_change_summary_value', props.row)"
                             />
                         </q-td>
-                    ''' % ControlManager.READONLY_PROPS_STRING)
+                    ''')
                     CM["table_summary"].on('_on_change_summary_value', _on_change_summary_value)
 
                     CM["table_summary"].add_slot('body-cell-bypass', r'''
@@ -838,8 +838,8 @@ def _initialize_experiment_ui(_=None):
             with MyUI.row():
                 CM["input_pre_notes"] = ui.input("Pre-notes").classes('flex-1')
                 CM["input_post_notes"] = ui.input("Post-notes") \
-                    .classes('flex-1').on("blur", _save_post_notes)
-                CM.update("input_post_notes", props="readonly")
+                    .classes('flex-1').props("readonly") \
+                    .on("blur", _save_post_notes)
 
         # refresh
         _refresh_summary()
