@@ -42,7 +42,7 @@ DEFAULT_LAYOUT_CODE = '''def custom_layout():
 
 def compute_layout(plus_shift=True):
     """Compute layout from Method."""
-    grid = CM["select_layout"].value.upper() == "GRID"
+    grid = CM["select_layout"].value.upper() == "GRID-1D/2D"
     layout = None
     if grid:
         # Read grid parameters
@@ -194,7 +194,7 @@ def _on_change_layout_params(_=None):
 
 def _on_change_select_layout(_=None):
     """Handle user update of layout method and trigger validation."""
-    use_grid = CM["select_layout"].value.upper() == "GRID"
+    use_grid = CM["select_layout"].value.upper() == "GRID-1D/2D"
     CM.update("container_grid", classes="hidden", classes_remove=use_grid)
     CM.update("code_custom", classes="hidden", classes_remove=not use_grid)
     _on_change_layout_params()
@@ -600,11 +600,11 @@ def _initialize_session_ui(e):
             with MyUI.row():
                 # Method
                 CM["select_layout"] = ui.select(
-                    ["GRID", "FUNCTION"],
-                    label="Method", value="GRID",
+                    ["GRID-1D/2D", "FUNCTION"],
+                    label="Method", value="GRID-1D/2D",
                     on_change=_on_change_select_layout).classes('w-full')
 
-                # --- GRID ---
+                # --- GRID-1D/2D ---
                 with MyUI.row() as CM["container_grid"]:
                     with ui.column().classes('flex-1'):
                         CM["number_nx"] = MyUI.number_int(
