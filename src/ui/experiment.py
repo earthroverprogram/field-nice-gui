@@ -346,7 +346,7 @@ def _on_change_gain_select(e):
     CM.update("text_gain_note", "ⓘ   " + GAIN_TEMPLATES[e.value]["note"])
 
 
-def _on_change_gain_code(_):
+def _on_change_gain_code(_=None):
     """Handle gain code change."""
     with CM["figure_gain"]:
         CM["is_gain_valid"] = _plot_gain_curve(CM["figure_gain"])
@@ -518,7 +518,8 @@ def _load_experiment(json_path, experiment_number, post_notes=True):
             CM.update("input_post_notes", "")
         CM.update("input_time", data["create_time"])
 
-    # Must manually refresh
+    # Must manually refresh gain and summary
+    _on_change_gain_code()
     _refresh_summary()
 
 
