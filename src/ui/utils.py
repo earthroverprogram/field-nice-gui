@@ -259,20 +259,24 @@ class CallbackBlocker:
 
 
 class ThreeImageViewer:
-    def __init__(self, height='300px', ratio=(2, 3, 2), gap=5):
+    def __init__(self, height='300px', ratio=(2, 3, 2), gap=10):
         with ui.row().classes('items-center w-full') \
-                .style(f'height: {height}; gap: {gap}px;') as self.container:
-            self.left_img = ui.image('').style('width: 100%; height: 100%;') \
-                .classes(f'flex-[{ratio[0]}]') \
-                .props('fit=contain')
+                .style(f'height: {height}; gap: {gap}px; perspective: 1000px;'):
+            self.left_img = ui.image('').style('''
+                width: 100%; height: 100%;
+                transform: rotateY(30deg);
+                transform-origin: left;
+            ''').classes(f'flex-[{ratio[0]}]').props('fit=contain')
 
-            self.middle_img = ui.image('').style('width: 100%; height: 100%;') \
-                .classes(f'flex-[{ratio[1]}]') \
-                .props('fit=contain')
+            self.middle_img = ui.image('').style('''
+                width: 100%; height: 100%;
+            ''').classes(f'flex-[{ratio[1]}]').props('fit=contain')
 
-            self.right_img = ui.image('').style('width: 100%; height: 100%;') \
-                .classes(f'flex-[{ratio[2]}]') \
-                .props('fit=contain')
+            self.right_img = ui.image('').style('''
+                width: 100%; height: 100%;
+                transform: rotateY(-30deg);
+                transform-origin: right;
+            ''').classes(f'flex-[{ratio[2]}]').props('fit=contain')
 
     def set_images(self, left, middle, right, fallbacks):
         """Set image sources. If a path doesn't exist, fallbacks are used."""
