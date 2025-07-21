@@ -1,6 +1,7 @@
 import base64
 import sys
 
+import matplotlib.pyplot as plt
 from nicegui import ui
 
 from src.ui import GS
@@ -21,6 +22,7 @@ GS.dark_mode = 'dark' in sys.argv
 # ------------------------
 primary = MyUI.primary_color()
 ui.colors(primary=primary)
+plt.style.use('dark_background' if GS.dark_mode else 'default')
 
 ui.add_head_html(f'''
 <style>
