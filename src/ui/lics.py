@@ -258,7 +258,8 @@ def initialize():
     CM["input_notes"] = ui.input("Notes").classes('w-full')
 
     # --- Create Time ---
-    CM["input_time"] = ui.input("Create Time").props("readonly").classes('w-full hidden')
+    CM["input_time"] = ui.input("Create Time").classes('w-full hidden')
+    CM.update("input_time", props="readonly")
 
     with ui.row().classes(f'w-full gap-10'):
         # --- Save Button ---

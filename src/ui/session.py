@@ -576,8 +576,8 @@ def _initialize_session_ui(e):
             CM["select_session"].bind_value_to(GS, "selected_session")
 
             # LICS
-            CM["select_lics"] = ui.input("Under LICS", value=lics). \
-                props("readonly").classes('flex-1')
+            CM["select_lics"] = ui.input("Under LICS", value=lics).classes('flex-1')
+            CM.update("select_lics", props="readonly")
 
         # --- Name Input ---
         with MyUI.row():
@@ -671,11 +671,11 @@ def _initialize_session_ui(e):
                                 type="number"
                                 class="w-full max-w-[80px]"
                                 v-model.number="props.row.dx"
-                                :readonly="props.row.lock_shift"
+                                :%s="props.row.lock_shift"
                                 @update:model-value="() => $parent.$emit('_on_change_shift', props.row)"
                             />
                         </q-td>
-                    ''')
+                    ''' % READONLY_PROPS_STRING)
                     CM["table_layout"].on('_on_change_shift', _on_change_shift)
 
                     CM["table_layout"].add_slot('body-cell-dy', r'''
@@ -685,11 +685,11 @@ def _initialize_session_ui(e):
                                 type="number"
                                 class="w-full max-w-[80px]"
                                 v-model.number="props.row.dy"
-                                :readonly="props.row.lock_shift"
+                                :%s="props.row.lock_shift"
                                 @update:model-value="() => $parent.$emit('_on_change_shift', props.row)"
                             />
                         </q-td>
-                    ''')
+                    ''' % ControlManager.READONLY_PROPS_STRING)
                     CM["table_layout"].on('_on_change_shift', _on_change_shift)
 
                     # Figure
@@ -764,7 +764,8 @@ def _initialize_session_ui(e):
         CM["input_notes"] = ui.input("Notes").classes('w-full')
 
         # --- Create Time ---
-        CM["input_time"] = ui.input("Create Time").props("readonly").classes('w-full hidden')
+        CM["input_time"] = ui.input("Create Time").classes('w-full hidden')
+        CM.update("input_time", props="readonly")
 
         with ui.row().classes('w-full gap-10'):
             # --- Save Button ---

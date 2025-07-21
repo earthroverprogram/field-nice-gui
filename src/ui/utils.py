@@ -14,6 +14,9 @@ from src.ui import GS
 class ControlManager:
     """A centralized manager for storing and updating UI controls by key."""
 
+    # Visual contrast of "readonly" seems too weak; use "disable" instead
+    READONLY_PROPS_STRING = "disable"  # You can switch back to "readonly"
+
     def __init__(self):
         # Dictionary to store UI controls, accessible by key
         self.controls = {}
@@ -49,6 +52,8 @@ class ControlManager:
 
         # Update or remove component properties
         if props is not None:
+            if props == "readonly":
+                props = ControlManager.READONLY_PROPS_STRING
             if props_remove:
                 ctr.props(remove=props)
             else:
