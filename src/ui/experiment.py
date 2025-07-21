@@ -106,7 +106,7 @@ def _plot_gain_curve(fig):
 
     # --- Draw gain curve ---
     ax = fig.gca()
-    ax.grid(True)
+    ax.grid(True, color=MyUI.gray_color(), linewidth=0.5)
     ax.plot(distances, gains, color=MyUI.primary_color(), zorder=10, lw=2)
     ax.set_xlabel("Distance (cm)")
     ax.set_ylabel("Gain (dB)")
@@ -221,7 +221,7 @@ def _plot_summary(fig, layout_dict):
 
     # --- Plotting ---
     ax = fig.gca()
-    ax.grid(True)
+    ax.grid(True, color=MyUI.gray_color(), linewidth=0.5)
     ax.scatter(layout[:, 0], layout[:, 1], s=40, color=colors, zorder=10)
     ax.scatter(src_xy[0], src_xy[1], s=80, color='red', marker="*", zorder=20)
     if st_dict:
@@ -231,9 +231,9 @@ def _plot_summary(fig, layout_dict):
 
     # --- Colorbar on top ---
     sm = ScalarMappable(norm=norm, cmap=cmap)
-    cbar = fig.colorbar(sm, ax=ax, shrink=0.7, orientation="vertical",
-                        location="right", pad=0.05)
-    cbar.set_label("Gain (dB)")
+    cbar = fig.colorbar(sm, ax=ax, shrink=0.7, orientation="horizontal",
+                        location="top", pad=0.05)
+    cbar.set_label("Gain (dB)  ", ha="right", x=0, labelpad=-25)
 
     # --- Margin ---
     points = [layout, src_xy[None, :]]
@@ -242,6 +242,20 @@ def _plot_summary(fig, layout_dict):
     all_xy = np.vstack(points)
     MyPlot.apply_margin(fig, all_xy)
     fig.tight_layout(pad=0)
+    bbox = ax.get_position()
+    ax.set_position([
+        bbox.x0 + 0.1,
+        bbox.y0,
+        bbox.width,
+        bbox.height
+    ])
+    bbox = cbar.ax.get_position()
+    cbar.ax.set_position([
+        bbox.x0 + 0.1,
+        bbox.y0,
+        bbox.width,
+        bbox.height
+    ])
     MyPlot.apply_dark(fig)
 
 

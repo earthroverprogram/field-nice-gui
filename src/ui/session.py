@@ -114,7 +114,7 @@ def _plot_layout(fig, layout):
 
     # Plot scatters
     ax = fig.gca()
-    ax.grid(True)
+    ax.grid(True, color=MyUI.gray_color(), linewidth=0.5)
     ax.scatter(layout[:, 0], layout[:, 1], s=50, color=MyUI.primary_color(), zorder=10)
     MyPlot.apply_margin(fig, layout)
     fig.tight_layout(pad=0)
