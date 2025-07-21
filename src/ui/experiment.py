@@ -644,7 +644,7 @@ async def _record():
         CM["button_record"].props("disable")
 
         # Play countdown voice if enabled
-        if CM['select_voice'].value != "Silent":
+        if CM['select_voice'].value != "<Silent>":
             CM["audio_countdown"].set_source(f"assets/countdown/{CM['select_voice'].value}.mp3")
             CM["audio_countdown"].play()
             await asyncio.sleep(0.2)  # Small delay to ensure audio starts
@@ -895,7 +895,7 @@ def _initialize_experiment_ui(_=None):
                     # Countdown
                     CM["checkbox_countdown"] = ui.checkbox("Countdown", value=False).classes('w-full')
                     files = sorted([audio[:-4] for audio in os.listdir('assets/countdown')
-                                    if audio.endswith('.mp3')]) + ["Silent"]
+                                    if audio.endswith('.mp3')]) + ["<Silent>"]
                     CM["select_voice"] = ui.select(
                         files, value=np.random.choice(files[:-1])) \
                         .props('filled').classes('q-pt-none') \
