@@ -631,39 +631,59 @@ def _on_change_experiment_number(_=None):
 
 
 async def _record():
-    # Step 1: Save experiment
+    """Main recording flow: optional countdown, then trigger actual recording."""
+
+    # Step 1: Save experiment before recording
     if not _save_experiment():
         ui.notify("Failed to save experiment. Recording skipped.", color='negative')
         return
 
-    # Step 2: Countdown
+    # Step 2: Optional countdown sequence
     if CM["checkbox_countdown"].value:
-        # No click during countdown
+        # Disable the record button during countdown
         CM["button_record"].props("disable")
 
-        # Set audio source and play
+        # Play countdown voice if enabled
         if CM['select_voice'].value != "Silent":
             CM["audio_countdown"].set_source(f"assets/countdown/{CM['select_voice'].value}.mp3")
             CM["audio_countdown"].play()
+            await asyncio.sleep(0.2)  # Small delay to ensure audio starts
 
-        # Show countdown numbers
+        # Show countdown numbers: 3, 2, 1
         CM["display_countdown"].style("display: block;")
-        for word in ["3", "2", "1", "Go!"]:
+        for word in ["3", "2", "1"]:
             CM["display_countdown"].text = word
             await asyncio.sleep(1)
+
+        # Step 3: Show "Go!" and immediately start recording
+        CM["display_countdown"].text = "Go!"
+        CM["button_record"].props(remove="disable").set_icon("stop_circle")
+
+        record_task = asyncio.create_task(_actual_record())  # Start recording immediately
+
+        # Keep displaying "Go!" for 1 second
+        await asyncio.sleep(1)
         CM["display_countdown"].style("display: none;")
 
-    # Step 3: Start recording
-    try:
+        # Step 4: Wait for recording to finish
+        try:
+            await record_task
+        finally:
+            # Step 5: Restore UI
+            CM["button_record"].set_icon("radio_button_checked")
+            _on_change_experiment_number()
+
+    else:
+        # If countdown is not enabled, start recording immediately
         CM["button_record"].props(remove="disable").set_icon("stop_circle")
-        _actual_record()
-    finally:
-        # Step 4: Restore UI
-        CM["button_record"].set_icon("radio_button_checked")
-        _on_change_experiment_number()
+        try:
+            await _actual_record()
+        finally:
+            CM["button_record"].set_icon("radio_button_checked")
+            _on_change_experiment_number()
 
 
-def _actual_record():
+async def _actual_record():
     """The actual recording process. Now just a placeholder."""
     lics = CM["select_lics"].value
     session = CM["select_session"].value
