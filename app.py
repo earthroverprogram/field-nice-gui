@@ -53,6 +53,17 @@ ui.add_head_html('''
 </style>
 ''')
 
+# Global readonly visual override
+readonly_color = "rgba(255, 255, 255, 0.6)" if GS.dark_mode else "rgba(0, 0, 0, 0.6)"
+ui.add_head_html('''
+<style>
+.q-field--readonly .q-field__native,
+.q-field--readonly .q-field__input {
+    color: %s !important;
+}
+</style>
+''' % readonly_color)
+
 # ------------------------
 # Main tab bar (centered)
 # ------------------------
