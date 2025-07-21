@@ -767,7 +767,7 @@ def _initialize_experiment_ui(_=None):
         with MyUI.cap_card("Auto Gain"):
             with MyUI.expansion(f"Gain Function"):
                 with MyUI.row():
-                    with ui.column().classes('w-2/3 gap-1'):
+                    with ui.column().classes('flex-[10] gap-1'):
                         default_gain_select = "Geometric spreading (physics-based)"
                         CM["select_gain"] = ui.select(
                             list(GAIN_TEMPLATES.keys()), value=default_gain_select,
@@ -784,11 +784,10 @@ def _initialize_experiment_ui(_=None):
                             on_change=_on_change_gain_code,
                             language="Python",
                             theme="githubDark" if GS.dark_mode else "githubLight",
-                        ).classes("w-full").style('height: 160px;')
-                    with ui.column().classes('flex-1'):
-                        with ui.matplotlib(dpi=200, figsize=(4, 4)) \
-                                .classes("w-full").figure as CM["figure_gain"]:  # noqa
-                            CM["is_gain_valid"] = _plot_gain_curve(CM["figure_gain"])
+                        ).classes("w-full").style('height: 200px;')
+                    with ui.matplotlib(dpi=200, figsize=(4, 4)) \
+                            .classes("flex-[6]").figure as CM["figure_gain"]:  # noqa
+                        CM["is_gain_valid"] = _plot_gain_curve(CM["figure_gain"])
 
         #################
         # Final summary #
