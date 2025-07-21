@@ -672,6 +672,7 @@ def _actual_record():
     fig.savefig(png_path, bbox_inches="tight", pad_inches=0.02)
     fig.clf()
     plt.close(fig)
+    plt.style.use('dark_background' if GS.dark_mode else 'default')  # Restore plt.style
 
 
 ###################

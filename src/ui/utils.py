@@ -3,7 +3,6 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import numpy as np
 from countryinfo import CountryInfo
 from nicegui import ui
@@ -152,7 +151,6 @@ class MyPlot:
     @staticmethod
     def apply_dark(fig):
         """Apply dark color palette."""
-        plt.style.use('dark_background' if GS.dark_mode else 'default')
         color = MyUI.bg_color()
         fig.patch.set_facecolor(color)
         fig.gca().set_facecolor(color)
