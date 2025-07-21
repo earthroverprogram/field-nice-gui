@@ -151,7 +151,7 @@ def _compute_summary():
         warn = "The following channels coincide with the source: [" + ", ".join(channels) + "]"
         ui.notify(warn, color="warning")
 
-    # Warn if any normal channel coincides with the trailing source
+    # Warn if any normal channel coincides with source trailing
     if st_dict:
         st_xy = np.array([st_dict["x"], st_dict["y"]])
         distances_st = np.linalg.norm(layout_with_st[:-1] - st_xy[None, :], axis=1)
@@ -159,7 +159,7 @@ def _compute_summary():
         loc_st_zeros = np.where(np.isclose(distances_st, 0.0))[0]
         if loc_st_zeros.size > 0:
             channels = [str(idx + 1) for idx in loc_st_zeros]
-            warn = f"The following channels coincide with the trailing source: [{', '.join(channels)}]"
+            warn = f"The following channels coincide with source trailing: [{', '.join(channels)}]"
             ui.notify(warn, color="warning")
 
     # --- Compute gains ---
