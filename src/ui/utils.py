@@ -27,7 +27,7 @@ class ControlManager:
         # Returns None if the key is not found
         return self.controls.get(key, None)
 
-    def update(self, key, value=None, options=None, label=None,
+    def update(self, key, value=None, options=None, label=None, text=None,
                props=None, props_remove=False,
                classes=None, classes_remove=False):
         # Update various attributes of a control identified by key
@@ -46,6 +46,10 @@ class ControlManager:
         # Update the control's label
         if label is not None:
             ctr.label = label
+
+        # Update the control's text
+        if text is not None:
+            ctr.text = text
 
         # Update or remove component properties
         if props is not None:
@@ -201,10 +205,12 @@ class MyUI:
 
     @staticmethod
     @contextmanager
-    def cap_card(caption: str, full=True, highlight=False):
+    def cap_card(caption: str, full=True, highlight=False, height_px=None):
         """Card with a floating caption."""
         ft_color = MyUI.primary_color() if highlight else MyUI.gray_color()
         card_classes = 'w-full' if full else 'flex-1'
+        if height_px is not None:
+            card_classes += f' h-[{height_px}px]'
         card_style = 'border-color: var(--q-primary);' if highlight else ''
         label_classes = 'absolute -top-2.5 left-4 q-px-sm'
         if highlight:
