@@ -227,7 +227,16 @@ class MyUI:
         """Integer-only number input with auto-round on blur."""
 
         def _round_to_int(e):
-            e.sender.value = int(round(e.sender.value or 0))
+            try:
+                val = float(e.sender.value)
+                val = int(round(val))
+                if min is not None and val < min:
+                    val = min
+                if max is not None and val > max:
+                    val = max
+                e.sender.value = val
+            except:  # noqa
+                e.sender.value = min or 0  # fallback
 
         return ui.number(
             label,

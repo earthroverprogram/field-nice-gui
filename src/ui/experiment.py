@@ -340,12 +340,17 @@ def _refresh_summary():
     # Figure
     with CM["figure_summary"]:
         _plot_summary(CM["figure_summary"], summary_dict)
+    with CM["figure_summary_dup"]:
+        _plot_summary(CM["figure_summary_dup"], summary_dict)
 
     # Review
-    CM.update("text_final",
-              f'\n#{int(CM["number_experiment"].value):04d} '
-              f'@ ({int(CM["number_x"].value)}, {int(CM["number_y"].value)})',
-              label="🟢 Final Review:")
+    if _is_new():
+        CM.update("label_final", text="🟢 Ready to Record")
+    else:
+        CM.update("label_final", text="✅ Completed Experiment")
+    loc_string = (f'#{int(CM["number_experiment"].value):04d} '
+                  f'@ ({int(CM["number_x"].value)}, {int(CM["number_y"].value)})')
+    CM.update("text_final", text=loc_string)
 
 
 def _on_change_source_location(_=None):
@@ -411,9 +416,8 @@ def _check_save(_=None):
 
     # --- Warning text visibility & content ---
     if not is_valid:
-        lines = ["  • Gain is invalid."]
-        CM.update("text_final", "\n" + "\n\n".join(lines),
-                  label="⚠️ Recording disabled due to:")
+        CM.update("label_final", text="⚠️ Recording Disabled")
+        CM.update("text_final", text="Invalid Gain")
 
 
 def _number_to_dir(experiment_number):
@@ -446,9 +450,7 @@ def _save_experiment():
         "number": int(CM["number_experiment"].value),
         "source_location": {
             "x": int(CM["number_x"].value),
-            "y": int(CM["number_y"].value),
-            "increment_x": int(CM["number_inc_x"].value),
-            "increment_y": int(CM["number_inc_y"].value)
+            "y": int(CM["number_y"].value)
         },
         "operators": {
             "computer": CM["input_computer_op"].value,
@@ -510,8 +512,6 @@ def _load_experiment(json_path, experiment_number, post_notes=True):
         # Source location
         CM.update("number_x", data["source_location"]["x"])
         CM.update("number_y", data["source_location"]["y"])
-        CM.update("number_inc_x", data["source_location"]["increment_x"])
-        CM.update("number_inc_y", data["source_location"]["increment_y"])
 
         # Operators
         CM.update("input_computer_op", data["operators"]["computer"])
@@ -576,10 +576,15 @@ def _get_next_number(folder):
 
 def _on_change_experiment_number(_=None):
     """Handle user changing selected experiment, including loading saved session data."""
+    # User used keyboard to clear number
+    if CM["number_experiment"].value is None:
+        return
+
+    # New flag
     is_new = _is_new()
 
     # 1. Set all field readonly states based on selection
-    for key in ["number_x", "number_y", "number_inc_x", "number_inc_y",
+    for key in ["number_x", "number_y",
                 "input_computer_op", "input_source_op", "input_protocol_op", "input_others_op",
                 "select_gain",
                 "select_excitation", "select_direction", "select_coupling", "number_repeats",
@@ -614,14 +619,14 @@ def _on_change_experiment_number(_=None):
         from_previous = _restore_for_new()
 
         # Source increment
-        if CM["checkbox_increment"].value and from_previous:
+        if from_previous:
             CM["number_x"].value += CM["number_inc_x"].value
             CM["number_y"].value += CM["number_inc_y"].value
 
     # 4. Preview
     fallbacks = ["src/ui/defaults/placeholder.png"] * 3
     if number == 1:
-        fallbacks[0] = ""  # Experiment 0 is not allowed
+        fallbacks[0] = ""  # Number 0 is not allowed
     CM["previewer"].set_images(
         folder.parent / f"experiment_{number - 1:04d}/placeholder.png",
         folder.parent / f"experiment_{number:04d}/placeholder.png",
@@ -647,7 +652,7 @@ async def _record():
         if CM['select_voice'].value != "<Silent>":
             CM["audio_countdown"].set_source(f"assets/countdown/{CM['select_voice'].value}.mp3")
             CM["audio_countdown"].play()
-            await asyncio.sleep(0.2)  # Small delay to ensure audio starts
+            await asyncio.sleep(0.1)  # Small delay to ensure audio starts
 
         # Show countdown numbers: 3, 2, 1
         CM["display_countdown"].style("display: block;")
@@ -681,6 +686,11 @@ async def _record():
         finally:
             CM["button_record"].set_icon("radio_button_checked")
             _on_change_experiment_number()
+
+    # Go next
+    if CM["checkbox_next"].value:
+        await asyncio.sleep(0.1)  # Wait for figure to flush
+        _go_next()
 
 
 async def _actual_record():
@@ -761,14 +771,11 @@ def _initialize_experiment_ui(_=None):
             # Source Location #
             ###################
             with MyUI.cap_card("Source Location", full=False, highlight=True):
-                CM["number_x"] = MyUI.number_int("Location X (cm)", value=-20,
-                                                 on_change=_on_change_source_location, full=True)
-                CM["number_y"] = MyUI.number_int("Location Y (cm)", value=0,
-                                                 on_change=_on_change_source_location, full=True)
-
-            with MyUI.cap_card("Source Increment", full=False):
-                CM["number_inc_x"] = MyUI.number_int("Increment X (cm)", value=10, full=True)
-                CM["number_inc_y"] = MyUI.number_int("Increment Y (cm)", value=0, full=True)
+                with MyUI.row():
+                    CM["number_x"] = MyUI.number_int("Location X (cm)", value=-20,
+                                                     on_change=_on_change_source_location, full=False)
+                    CM["number_y"] = MyUI.number_int("Location Y (cm)", value=0,
+                                                     on_change=_on_change_source_location, full=False)
 
             #############
             # Operators #
@@ -777,7 +784,6 @@ def _initialize_experiment_ui(_=None):
                 with MyUI.row():
                     CM["input_computer_op"] = ui.input("Computer").classes('flex-1')
                     CM["input_source_op"] = ui.input("Source").classes('flex-1')
-                with MyUI.row():
                     CM["input_protocol_op"] = ui.input("Protocol").classes('flex-1')
                     CM["input_others_op"] = ui.input("We are just here").classes('flex-1')
 
@@ -874,9 +880,6 @@ def _initialize_experiment_ui(_=None):
                     .classes('flex-1').props("readonly") \
                     .on("blur", _save_post_notes)
 
-        # refresh
-        _refresh_summary()
-
         ###########
         # Actions #
         ###########
@@ -884,51 +887,75 @@ def _initialize_experiment_ui(_=None):
         # --- Create Time ---
         # CM["input_time"] = ui.input("Create Time").props("readonly").classes('w-full hidden')
 
-        # --- Record ---
-        with MyUI.cap_card("Record"):
-            with MyUI.row().classes('items-center'):
-                with ui.column().classes("flex-[5] justify-start"):
-                    CM["checkbox_increment"] = ui.checkbox("Auto Increment Source", value=True) \
-                        .tooltip("Auto-moves source when starting a new experiment. "
-                                 "Only applies if the previous experiment is completed.").classes('w-full')
+        ui.element('div').style(f'height: 4px; background-color: {MyUI.gray_color()}; '
+                                'border-radius: 2px; width: 100%; margin: 20px 0;')
 
-                    # Countdown
-                    CM["checkbox_countdown"] = ui.checkbox("Countdown", value=False).classes('w-full')
-                    files = sorted([audio[:-4] for audio in os.listdir('assets/countdown')
-                                    if audio.endswith('.mp3')]) + ["<Silent>"]
-                    CM["select_voice"] = ui.select(
-                        files, value=np.random.choice(files[:-1])) \
-                        .props('filled').classes('q-pt-none') \
-                        .bind_enabled_from(CM["checkbox_countdown"], 'value').classes('w-3/4')
-                    CM["audio_countdown"] = ui.audio("", autoplay=False, controls=False)
-                    CM["display_countdown"] = ui.label("321").classes(
-                        "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 "
-                        "text-primary text-[200px] font-bold z-50 pointer-events-none"
-                    ).style("display: none;")
+        with MyUI.row():
+            card_height = 300
+            # --- Options ---
+            with ui.column().classes('flex-[3]'):
+                with MyUI.cap_card("Record Options", full=True, height_px=card_height):
+                    with MyUI.row():
+                        # Countdown options
+                        CM["checkbox_countdown"] = MyUI.checkbox("Countdown", value=True, full=False)
+                        files = sorted([audio[:-4] for audio in os.listdir('assets/countdown')
+                                        if audio.endswith('.mp3')]) + ["<Silent>"]
+                        CM["select_voice"] = ui.select(
+                            files, value=np.random.choice(files[:-1])) \
+                            .props('filled').classes('q-pt-none').classes('flex-1') \
+                            .bind_enabled_from(CM["checkbox_countdown"], 'value')
 
-                with ui.column().classes("flex-[7] items-center justify-center"):
-                    with ui.row().classes('w-full items-center justify-center'):
+                        # Hidden UI for countdown sound and visual
+                        CM["audio_countdown"] = ui.audio("", autoplay=False, controls=False)
+                        CM["display_countdown"] = ui.label("321").classes(
+                            "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 "
+                            "text-primary text-[200px] font-bold z-50 pointer-events-none rounded-xl px-8 py-4 text-center"
+                        ).style(
+                            f"display: none; background-color: {MyUI.bg_color()}; min-width: 400px;"
+                        )
+
+                    # Source increment
+                    ui.separator()
+                    ui.label("Source Increment").classes("w-full")
+                    with MyUI.row():
+                        CM["number_inc_x"] = MyUI.number_int("Incr X (cm)", value=10, full=False)
+                        CM["number_inc_y"] = MyUI.number_int("Incr Y (cm)", value=0, full=False)
+
+                    # Go next after record
+                    ui.separator()
+                    CM["checkbox_next"] = MyUI.checkbox("Go Next after Record", value=False, full=True)
+
+            # --- Record ---
+            with ui.column().classes('flex-[6]'):
+                with MyUI.cap_card("Record", full=True, highlight=True, height_px=card_height):
+                    with ui.row().classes('w-full items-center justify-center gap-10 flex-nowrap'):
                         bg = MyUI.bg_color()
                         ft = MyUI.font_color()
 
                         CM["button_prev"] = ui.button(icon='chevron_left', on_click=_go_previous) \
-                            .classes('h-24 text-5xl').props("flat") \
+                            .classes('h-24 text-7xl').props("flat") \
                             .style(f'background-color: {bg}; color: {ft}; border: none;')
 
                         CM["button_record"] = ui.button(icon='radio_button_checked', on_click=_record) \
-                            .classes('h-24 text-5xl').props("flat") \
+                            .classes('h-24 text-7xl').props("flat") \
                             .style(f'background-color: {bg}; color: {ft}; border: none;')
 
                         CM["button_next"] = ui.button(icon='chevron_right', on_click=_go_next) \
-                            .classes('h-24 text-5xl').props("flat") \
+                            .classes('h-24 text-7xl').props("flat") \
                             .style(f'background-color: {bg}; color: {ft}; border: none;')
 
-                with ui.column().classes("flex-[5] justify-start"):
-                    CM["text_final"] = ui.textarea().props('readonly borderless') \
-                        .classes('text-2xl large-label h-24 self-end')
+                    # --- Info ---
+                    CM["label_final"] = ui.label().classes('font-bold -mt-4 text-xl mr-2 font-mono w-full text-center')
+                    CM["text_final"] = ui.label().classes('text-xl mr-2 font-mono w-full text-center')
 
-            with MyUI.expansion("Preview").classes("w-full"):
-                CM["previewer"] = ThreeImageViewer()
+            # --- Figure ---
+            with ui.column().classes('flex-[3]'):
+                with MyUI.cap_card("Final Setup", full=True, height_px=card_height):
+                    CM["figure_summary_dup"] = ui.matplotlib(dpi=200, figsize=(4, 4)).classes("h-full").figure
+
+        # Preview
+        with MyUI.expansion("Output Preview").classes("w-full"):
+            CM["previewer"] = ThreeImageViewer()
 
     # Safe call
     _on_change_experiment_number()
