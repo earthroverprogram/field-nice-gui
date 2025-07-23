@@ -1,9 +1,9 @@
 {
   "datatype": [
-    "Int8",
-    "Int16",
-    "Int24",
-    "Float32"
+    "int8",
+    "int16",
+    "int32",
+    "float32"
   ],
   "excitation": [
     "Hammer",

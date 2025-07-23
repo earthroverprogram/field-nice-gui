@@ -28,7 +28,7 @@
   },
   "datalogger": {
     "device": "Dummy",
-    "datatype": "Float32",
+    "datatype": "float32",
     "sr": 10000,
     "duration": 5
   },
