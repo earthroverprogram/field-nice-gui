@@ -554,9 +554,9 @@ def _refresh_device(_=None):
 
 
 def _monitor_device(_=None):
-    """Open a dialog to monitor device signal in real time (auto-normalized)."""
+    """Open a dialog to monitor device signal in real time (time domain or frequency domain)."""
 
-    # --- Step 1: Get current settings from UI ---
+    # --- Step 1: Get current device settings from UI ---
     device_name = _logger_value2name(CM["select_device"].value)
     info = CM["detected_devices"][device_name]
     n_channels = info["n_chs"]
@@ -568,60 +568,115 @@ def _monitor_device(_=None):
     samplerate = CM["number_sr"].value
     channel_list = list(range(1, n_channels + 1))
 
-    # --- Step 2: Define UI dialog and plotting figure ---
+    # --- Step 2: Define UI and Datalogger instance ---
     datalogger = Datalogger()
 
     def _close_and_stop():
+        """Stop stream and close dialog."""
         datalogger.stop_streaming()
         dlg.close()
 
+    # Dialog and controls
     with ui.dialog().props('persistent') as dlg, ui.card().style('width: 80vw; height: 80vh;'):
-        ui.label(f"Monitoring: {device_name}").classes("text-lg font-bold self-center")
+        with ui.row().classes("items-center justify-between w-full"):
+            ui.label(f"Monitoring: {device_name}").classes("text-2xl font-bold")
+            ui.button(icon="close", on_click=_close_and_stop).classes("text-2xl").props("flat round").classes(
+                "w-12 h-12")
+
+        # Basic settings row
         with MyUI.row():
-            refresh_interval = ui.number("Refresh Interval (s)",
-                                         value=0.5, min=0.1, step=0.1).classes("flex-1")
+            refresh_interval = ui.number("Refresh Interval (s)", value=0.5, min=0.1, step=0.1).classes("flex-1")
             window_selector = ui.select(
-                options=[256, 512, 1024, 2048, 4096, 8192, 16384, 32768],
+                options=[256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536],
                 value=1024,
                 label="Window Size"
             ).classes("flex-1")
-            with ui.row().style('align-items: center; height: 56px;'):
-                ui.button("Quit Monitoring", on_click=_close_and_stop).classes("flex-1")
 
-        fig = ui.matplotlib(figsize=(4, n_channels / 3)).classes("w-full self-center").figure
+        # Frequency domain controls
+        with MyUI.row():
+            number_min_freq = ui.number("Min Freq (Hz)", value=100,
+                                        min=0, max=samplerate // 2,
+                                        step=100).classes("flex-1")
+            number_max_freq = ui.number("Max Freq (Hz)", value=samplerate // 2,
+                                        min=0, max=samplerate // 2,
+                                        step=100).classes("flex-1")
+            checkbox_freq = MyUI.checkbox("Frequency Domain", value=False, full=False)
+
+        # Plot and control
+        fig = ui.matplotlib(figsize=(6, 1.5 * max(n_channels / 2, 3))).classes("w-full self-center").figure
 
     dlg.open()
 
-    # --- Step 3: Create buffer and callback ---
-    signal_buffer = np.zeros((window_selector.value, n_channels), dtype=np.float32)
+    # --- Step 3: Initialize buffer and callback ---
+    signal_buffer = np.zeros((int(window_selector.value), n_channels), dtype=np.float32)
     last_draw = 0
 
     def _on_data(block: np.ndarray):
         nonlocal signal_buffer, last_draw
 
-        # Update buffer
+        # Update signal buffer
         window = int(window_selector.value)
         signal_buffer = np.vstack([signal_buffer, block])[-window:]
+        if signal_buffer.shape[0] != window:
+            return  # Wait until buffer is full
 
-        # Update only if enough time passed
+        # Control update frequency
         now = time.time()
         if now - last_draw < float(refresh_interval.value):
             return
         last_draw = now
 
-        # Normalize and plot
-        normed = signal_buffer / (np.max(np.abs(signal_buffer), axis=0, keepdims=True) + 1e-8) / 2
+        # Start plotting
         with fig:
             ax = fig.gca()
             ax.clear()
-            for ch in range(n_channels):
-                ax.plot(normed[:, ch] + ch, lw=0.8)
+
+            if checkbox_freq.value:
+                # --- Frequency domain ---
+                freqs = np.fft.rfftfreq(window, d=1 / samplerate)
+                fft_vals = np.abs(np.fft.rfft(signal_buffer, axis=0))
+
+                try:
+                    min_freq = float(number_min_freq.value or 0.0)
+                    max_freq = float(number_max_freq.value or samplerate // 2)
+                except:  # noqa
+                    min_freq, max_freq = 0.0, samplerate // 2
+
+                # Swap if invalid
+                if min_freq > max_freq:
+                    min_freq, max_freq = max_freq, min_freq
+
+                idx = (freqs >= min_freq) & (freqs <= max_freq)
+                freqs = freqs[idx]
+                fft_vals = fft_vals[idx, :]
+                if fft_vals.shape[0] == 0 or np.all(fft_vals == 0):
+                    return  # Avoid invalid normalization or empty plot
+
+                normed = fft_vals / (np.max(np.abs(fft_vals), axis=0, keepdims=True) + 1e-8) / 2
+                for ch in range(n_channels):
+                    ax.plot(freqs, -normed[:, ch] + ch, lw=1)
+                ax.set_xlabel("Frequency (Hz)")
+
+            else:
+                # --- Time domain ---
+                normed = signal_buffer / (np.max(np.abs(signal_buffer), axis=0, keepdims=True) + 1e-8) / 2
+                time_axis = np.arange(window) / samplerate
+                for ch in range(n_channels):
+                    ax.plot(time_axis, -normed[:, ch] + ch, lw=1)
+                ax.set_xlabel("Time (s)")
+
             ax.set_ylim(-1, n_channels)
             ax.set_yticks(np.arange(n_channels))
             ax.set_yticklabels([str(i + 1) for i in range(n_channels)])
-            ax.set_xticks([])
             ax.invert_yaxis()
             fig.tight_layout(pad=0)
+            MyPlot.apply_dark(fig)
+
+    def _on_data_try(block: np.ndarray):
+        try:
+            _on_data(block)
+        except Exception as e:
+            print(f"[Monitor ERROR] {e}")
 
     # --- Step 4: Start streaming ---
     datalogger.start_monitoring(
@@ -629,7 +684,7 @@ def _monitor_device(_=None):
         channel_list=channel_list,
         datatype=datatype,
         samplerate=samplerate,
-        on_data=_on_data
+        on_data=_on_data_try
     )
 
 
