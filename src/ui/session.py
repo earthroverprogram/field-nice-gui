@@ -1,5 +1,6 @@
 import json
 import re
+import time
 from datetime import datetime
 from types import SimpleNamespace
 
@@ -284,7 +285,7 @@ def _save_session(_=None):
             "shift": CM["shift_layout"]
         },
         "datalogger": {
-            "device": _logger_value2name(CM["select_logger"].value),
+            "device": _logger_value2name(CM["select_device"].value),
             "datatype": CM["select_datatype"].value,
             "sr": int(CM["number_sr"].value),
             "duration": int(CM["number_duration"].value)
@@ -355,7 +356,7 @@ def _load_session(json_path, input_name):
             for ch, shift in CM["shift_layout"].items()
         }
         # Datalogger
-        CM.update("select_logger", _logger_name2value(data["datalogger"]["device"]))
+        CM.update("select_device", _logger_name2value(data["datalogger"]["device"]))
         CM.update("select_datatype", data["datalogger"]["datatype"])
         CM.update("number_sr", data["datalogger"]["sr"])
         CM.update("number_duration", data["datalogger"]["duration"])
@@ -424,7 +425,7 @@ def _on_change_select_session(_=None):
                 "select_layout",
                 "number_nx", "number_ny", "number_ox", "number_oy",
                 "number_dx", "number_dy", "number_sx", "number_sy",
-                "select_logger", "select_datatype", "number_sr", "number_duration",
+                "select_device", "select_datatype", "number_sr", "number_duration",
                 "select_excitation", "select_direction", "select_coupling", "number_repeats",
                 "number_st_x", "number_st_y", "number_st_ch",
                 "select_weather", "select_temperature",
@@ -508,7 +509,7 @@ def _on_change_st(e):
 
 def _logger_name2value(name):
     """Format options in logger select."""
-    n_ch = CM["detected_devices"][name]
+    n_ch = CM["detected_devices"][name]["n_chs"]
     if n_ch == 0:
         return f'{name}  【⚠️ Undetected】'
     else:
@@ -517,19 +518,19 @@ def _logger_name2value(name):
 
 def _logger_value2name(value):
     """Extract name from select option."""
-    return value.split(" ")[0].strip()
+    return value.split("【")[0].strip()
 
 
 def _refresh_device(_=None):
     """Refresh device table."""
     # Update device availability
-    CM["detected_devices"] = Datalogger.get_devices()
+    CM["detected_devices"] = Datalogger.get_logical_devices()
 
     # Value and options
-    name_current = _logger_value2name(CM["select_logger"].value)
+    name_current = _logger_value2name(CM["select_device"].value)
     idx_current = None
     options = []
-    for i, name in enumerate(CM["detected_devices"]):
+    for i, name in enumerate(CM["detected_devices"].keys()):
         options.append(_logger_name2value(name))
         if name == name_current:
             idx_current = i
@@ -539,7 +540,87 @@ def _refresh_device(_=None):
         "Impossible Error. Report for debugging."
 
     # Update
-    CM.update("select_logger", value=options[idx_current], options=options)
+    CM.update("select_device", value=options[idx_current], options=options)
+
+
+def _monitor_device(_=None):
+    """Open a dialog to monitor device signal in real time (auto-normalized)."""
+
+    # --- Step 1: Get current settings from UI ---
+    device_name = _logger_value2name(CM["select_device"].value)
+    info = CM["detected_devices"][device_name]
+    n_channels = info["n_chs"]
+    if n_channels == 0:
+        ui.notify(f"Device '{device_name}' is not detected.", color='warning')
+        return
+
+    datatype = CM["select_datatype"].value
+    samplerate = CM["number_sr"].value
+    channel_list = list(range(1, n_channels + 1))
+
+    # --- Step 2: Define UI dialog and plotting figure ---
+    datalogger = Datalogger()
+
+    def _close_and_stop():
+        datalogger.stop_streaming()
+        dlg.close()
+
+    with ui.dialog().props('persistent') as dlg, ui.card().style('width: 80vw; height: 80vh;'):
+        ui.label(f"Monitoring: {device_name}").classes("text-lg font-bold self-center")
+        with MyUI.row():
+            refresh_interval = ui.number("Refresh Interval (s)",
+                                         value=0.5, min=0.1, step=0.1).classes("flex-1")
+            window_selector = ui.select(
+                options=[512, 1024, 2048, 4096, 8192],
+                value=1024,
+                label="Window Size"
+            ).classes("flex-1")
+            with ui.row().style('align-items: center; height: 56px;'):
+                ui.button("Quit Monitoring", on_click=_close_and_stop).classes("flex-1")
+
+        fig = ui.matplotlib(figsize=(4, n_channels / 3)).classes("w-full self-center").figure
+
+    dlg.open()
+
+    # --- Step 3: Create buffer and callback ---
+    signal_buffer = np.zeros((window_selector.value, n_channels), dtype=np.float32)
+    last_draw = 0
+
+    def _on_data(block: np.ndarray):
+        nonlocal signal_buffer, last_draw
+
+        # Update buffer
+        window = int(window_selector.value)
+        signal_buffer = np.vstack([signal_buffer, block])[-window:]
+
+        # Update only if enough time passed
+        now = time.time()
+        if now - last_draw < float(refresh_interval.value):
+            return
+        last_draw = now
+
+        # Normalize and plot
+        normed = signal_buffer / (np.max(np.abs(signal_buffer), axis=0, keepdims=True) + 1e-8) / 2
+        with fig:
+            ax = fig.gca()
+            ax.clear()
+            for ch in range(n_channels):
+                ax.plot(normed[:, ch] + ch, lw=0.8)
+            ax.set_ylim(-1, n_channels)
+            ax.set_yticks(np.arange(n_channels))
+            ax.set_yticklabels([str(i + 1) for i in range(n_channels)])
+            ax.set_xticks([])
+            ax.invert_yaxis()
+            fig.tight_layout(pad=0)
+
+    # --- Step 4: Start streaming ---
+    datalogger.start_monitoring(
+        logical_name=device_name,
+        channel_list=channel_list,
+        datatype=datatype,
+        samplerate=samplerate,
+        on_data=_on_data
+    )
 
 
 ##################
@@ -734,20 +815,31 @@ def _initialize_session_ui(e):
                 # --- Datalogger ---
                 CM["detected_devices"] = {}
                 with MyUI.row(gap=4):
-                    CM["select_logger"] = ui.select(
+                    # No callback changing device
+                    CM["select_device"] = ui.select(
                         ["Dummy"], value="Dummy", label="Device",
                     ).classes('flex-1')
+
+                    # Pop up devices and select Dummy
                     _refresh_device()
 
+                    # Let user refresh device detection
                     with ui.row().style('align-items: center; height: 56px;'):
-                        CM["button_device"] = ui.button(
+                        ui.button(
                             icon="refresh",
                             on_click=_refresh_device
                         ).classes('w-8 h-8')
 
+                    # Let user monitor selected device
+                    with ui.row().style('align-items: center; height: 56px;'):
+                        ui.button(
+                            icon="monitor",
+                            on_click=_monitor_device
+                        ).classes('w-8 h-8')
+
                 CM["select_datatype"] = ui.select(
-                    SESSION_OPTIONS["datatype"], value="Float32",
-                    label="Datatype (Float32 Recommended)").classes('w-full')
+                    SESSION_OPTIONS["datatype"], value="float32",
+                    label="Datatype (float32 Recommended)").classes('w-full')
                 CM["number_sr"] = MyUI.number_int("Sampling Rate", min=1, value=10000)
                 CM["number_duration"] = MyUI.number_int("Duration (s)", min=1, value=5)
 
