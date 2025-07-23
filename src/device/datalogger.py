@@ -36,7 +36,6 @@ class Datalogger:
         self.mode = None
         self.on_data = None
         self.datatype = None
-        self.lock = threading.Lock()
 
     def __enter__(self):
         return self
@@ -92,94 +91,91 @@ class Datalogger:
 
     def _start_streaming_dummy(self, channel_list,
                                datatype, samplerate, mode, on_data=None):
-        with self.lock:
-            self.active_channels = [ch - 1 for ch in channel_list]
-            self.mode = mode
-            self.on_data = on_data
-            self.stop_flag = False
-            self.buffer = [] if mode == 'record' else None
+        self.active_channels = [ch - 1 for ch in channel_list]
+        self.mode = mode
+        self.on_data = on_data
+        self.stop_flag = False
+        self.buffer = [] if mode == 'record' else None
 
-            dtype = np.dtype(datatype)
-            blocksize = 512
-            interval = blocksize / samplerate
-            t = 0
+        dtype = np.dtype(datatype)
+        blocksize = 512
+        interval = blocksize / samplerate
+        t = 0
 
-            def dummy_loop():
-                nonlocal t
-                while not self.stop_flag:
-                    time_array = (t + np.arange(blocksize)) / samplerate
-                    t += blocksize
-                    base = np.sin(2 * np.pi * 440 * time_array)
-                    full_block = np.zeros((blocksize, DUMMY_CHANNELS), dtype=dtype)
-                    for ch in self.active_channels:
-                        if ch < DUMMY_CHANNELS:
-                            full_block[:, ch] = base
-                    selected = full_block[:, self.active_channels]
-                    if self.mode == 'record':
-                        self.buffer.append(selected)
-                    elif self.mode == 'monitor' and self.on_data:
-                        self.on_data(selected)
-                    time.sleep(interval)
-
-            self.thread = threading.Thread(target=dummy_loop)
-            self.thread.start()
-
-    def _start_streaming(self, logical_name, channel_list,
-                         datatype, samplerate, mode, on_data=None):
-        with self.lock:
-            self.datatype = datatype
-            self.mode = mode
-            self.on_data = on_data
-            self.stop_flag = False
-            self.buffer = [] if mode == 'record' else None
-            self.active_channels = [ch - 1 for ch in channel_list]
-
-            info = self.get_logical_devices().get(logical_name)
-            if not info or not info["physical_name"] or info["n_chs"] == 0:
-                raise ValueError(f"Logical device '{logical_name}' not mapped to any physical device.")
-
-            physical_name = info["physical_name"]
-            max_channels = info["n_chs"]
-            invalid = [ch + 1 for ch in self.active_channels if ch >= max_channels]
-            if invalid:
-                ui.notify(f"Insufficient physical channels to record channels: {invalid}", color='warning')
-                raise ValueError(f"Device '{physical_name}' does not support channels: {invalid}")
-
-            if physical_name == "Dummy":
-                self._start_streaming_dummy(channel_list, datatype, samplerate, mode, on_data)
-                return
-
-            def callback(indata, frames, time_info, status):  # noqa
-                if self.stop_flag:
-                    raise sd.CallbackStop()
-                selected = indata[:, self.active_channels].copy()
+        def dummy_loop():
+            nonlocal t
+            while not self.stop_flag:
+                time_array = (t + np.arange(blocksize)) / samplerate
+                t += blocksize
+                base = np.sin(2 * np.pi * 440 * time_array)
+                full_block = np.zeros((blocksize, DUMMY_CHANNELS), dtype=dtype)
+                for ch in self.active_channels:
+                    if ch < DUMMY_CHANNELS:
+                        full_block[:, ch] = base
+                selected = full_block[:, self.active_channels]
                 if self.mode == 'record':
                     self.buffer.append(selected)
                 elif self.mode == 'monitor' and self.on_data:
                     self.on_data(selected)
+                time.sleep(interval)
 
-            self.stream = sd.InputStream(
-                samplerate=samplerate,
-                channels=max(self.active_channels) + 1,
-                device=physical_name,
-                callback=callback,
-                dtype=datatype
-            )
+        self.thread = threading.Thread(target=dummy_loop)
+        self.thread.start()
 
-            self.thread = threading.Thread(target=self._stream_runner)
-            self.thread.start()
+    def _start_streaming(self, logical_name, channel_list,
+                         datatype, samplerate, mode, on_data=None):
+        self.datatype = datatype
+        self.mode = mode
+        self.on_data = on_data
+        self.stop_flag = False
+        self.buffer = [] if mode == 'record' else None
+        self.active_channels = [ch - 1 for ch in channel_list]
+
+        info = self.get_logical_devices().get(logical_name)
+        if not info or not info["physical_name"] or info["n_chs"] == 0:
+            raise ValueError(f"Logical device '{logical_name}' not mapped to any physical device.")
+
+        physical_name = info["physical_name"]
+        max_channels = info["n_chs"]
+        invalid = [ch + 1 for ch in self.active_channels if ch >= max_channels]
+        if invalid:
+            ui.notify(f"Insufficient physical channels to record channels: {invalid}", color='warning')
+            raise ValueError(f"Device '{physical_name}' does not support channels: {invalid}")
+
+        if physical_name == "Dummy":
+            self._start_streaming_dummy(channel_list, datatype, samplerate, mode, on_data)
+            return
+
+        def callback(indata, frames, time_info, status):  # noqa
+            if self.stop_flag:
+                raise sd.CallbackStop()
+            selected = indata[:, self.active_channels].copy()
+            if self.mode == 'record':
+                self.buffer.append(selected)
+            elif self.mode == 'monitor' and self.on_data:
+                self.on_data(selected)
+
+        self.stream = sd.InputStream(
+            samplerate=samplerate,
+            channels=max(self.active_channels) + 1,
+            device=physical_name,
+            callback=callback,
+            dtype=datatype
+        )
+
+        self.thread = threading.Thread(target=self._stream_runner)
+        self.thread.start()
 
     def stop_streaming(self):
-        with self.lock:
-            self.stop_flag = True
-            if self.thread:
-                self.thread.join()
-                self.thread = None
+        self.stop_flag = True
+        if self.thread:
+            self.thread.join()
+            self.thread = None
 
-            if self.mode == 'record' and self.buffer:
-                return np.concatenate(self.buffer, axis=0)
-            else:
-                return np.empty((0, len(self.active_channels)), dtype=self.datatype)
+        if self.mode == 'record' and self.buffer:
+            return np.concatenate(self.buffer, axis=0)
+        else:
+            return np.empty((0, len(self.active_channels)), dtype=self.datatype)
 
     def start_recording(self, logical_name, channel_list, datatype="float32", samplerate=44100):
         """
