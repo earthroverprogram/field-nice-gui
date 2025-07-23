@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import numpy as np
 from nicegui import ui
 
+from src.device.datalogger import Datalogger
 from src.ui import GS, DATA_DIR
 from src.ui.utils import ControlManager, get_existing_sorted, MyPlot, MyUI, CallbackBlocker
 
@@ -283,7 +284,7 @@ def _save_session(_=None):
             "shift": CM["shift_layout"]
         },
         "datalogger": {
-            "device": CM["select_logger"].value,
+            "device": _logger_value2name(CM["select_logger"].value),
             "datatype": CM["select_datatype"].value,
             "sr": int(CM["number_sr"].value),
             "duration": int(CM["number_duration"].value)
@@ -354,7 +355,7 @@ def _load_session(json_path, input_name):
             for ch, shift in CM["shift_layout"].items()
         }
         # Datalogger
-        CM.update("select_logger", data["datalogger"]["device"])
+        CM.update("select_logger", _logger_name2value(data["datalogger"]["device"]))
         CM.update("select_datatype", data["datalogger"]["datatype"])
         CM.update("number_sr", data["datalogger"]["sr"])
         CM.update("number_duration", data["datalogger"]["duration"])
@@ -498,17 +499,47 @@ def _on_change_name_format(e):
     _check_save()
 
 
-def _on_change_select_logger(_=None):
-    """Trigger logger validation."""
-    if CM["select_logger"].value == "EVO-16":
-        ui.notify("EVO-16 is not detected.", color="warning")  # TODO
-
-
 def _on_change_st(e):
     """Source trailing checkbox disabled/enabled."""
     enabled = e.value
     for key in ["number_st_x", "number_st_y", "number_st_ch"]:
         CM.update(key, props="disable", props_remove=enabled)
+
+
+def _logger_name2value(name):
+    """Format options in logger select."""
+    n_ch = CM["detected_devices"][name]
+    if n_ch == 0:
+        return f'{name}  【⚠️ Undetected】'
+    else:
+        return f'{name}  【🟢 {n_ch} CHs Ready】'
+
+
+def _logger_value2name(value):
+    """Extract name from select option."""
+    return value.split(" ")[0].strip()
+
+
+def _refresh_device(_=None):
+    """Refresh device table."""
+    # Update device availability
+    CM["detected_devices"] = Datalogger.get_devices()
+
+    # Value and options
+    name_current = _logger_value2name(CM["select_logger"].value)
+    idx_current = None
+    options = []
+    for i, name in enumerate(CM["detected_devices"]):
+        options.append(_logger_name2value(name))
+        if name == name_current:
+            idx_current = i
+
+    # Check index
+    assert idx_current is not None and 0 <= idx_current < len(options), \
+        "Impossible Error. Report for debugging."
+
+    # Update
+    CM.update("select_logger", value=options[idx_current], options=options)
 
 
 ##################
@@ -701,13 +732,22 @@ def _initialize_session_ui(e):
             ##############
             with MyUI.cap_card("Datalogger", full=False):
                 # --- Datalogger ---
-                CM["select_logger"] = ui.select(
-                    SESSION_OPTIONS["device"], value="Dummy",
-                    label="Device", on_change=_on_change_select_logger
-                ).classes('w-full')
+                CM["detected_devices"] = {}
+                with MyUI.row(gap=4):
+                    CM["select_logger"] = ui.select(
+                        ["Dummy"], value="Dummy", label="Device",
+                    ).classes('flex-1')
+                    _refresh_device()
+
+                    with ui.row().style('align-items: center; height: 56px;'):
+                        CM["button_device"] = ui.button(
+                            icon="refresh",
+                            on_click=_refresh_device
+                        ).classes('w-8 h-8')
+
                 CM["select_datatype"] = ui.select(
                     SESSION_OPTIONS["datatype"], value="Float32",
-                    label="Datatype").classes('w-full')
+                    label="Datatype (Float32 Recommended)").classes('w-full')
                 CM["number_sr"] = MyUI.number_int("Sampling Rate", min=1, value=10000)
                 CM["number_duration"] = MyUI.number_int("Duration (s)", min=1, value=5)
 

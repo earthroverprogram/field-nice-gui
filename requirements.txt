@@ -1,6 +1,8 @@
-countryinfo~=0.1.2
 nicegui~=2.21.1
-pycountry~=24.6.1
 numpy~=2.2.6
-pyyaml~=6.0.2
+countryinfo~=0.1.2
+pycountry~=24.6.1
 matplotlib~=3.10.3
+yaml~=0.2.5
+pyyaml~=6.0.2
+sounddevice~=0.5.2

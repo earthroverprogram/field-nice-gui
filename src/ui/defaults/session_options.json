@@ -1,12 +1,8 @@
 {
-  "device": [
-    "Dummy",
-    "EVO-16"
-  ],
   "datatype": [
+    "Int8",
     "Int16",
     "Int24",
-    "Int32",
     "Float32"
   ],
   "excitation": [
