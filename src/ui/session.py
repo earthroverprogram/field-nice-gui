@@ -571,7 +571,7 @@ def _monitor_device(_=None):
             refresh_interval = ui.number("Refresh Interval (s)",
                                          value=0.5, min=0.1, step=0.1).classes("flex-1")
             window_selector = ui.select(
-                options=[512, 1024, 2048, 4096, 8192],
+                options=[256, 512, 1024, 2048, 4096, 8192, 16384, 32768],
                 value=1024,
                 label="Window Size"
             ).classes("flex-1")
