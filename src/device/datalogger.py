@@ -126,7 +126,6 @@ class Datalogger:
 
     def _start_streaming(self, logical_name, channel_list,
                          datatype, samplerate, mode, on_data=None):
-
         with self.lock:
             self.datatype = datatype
             self.mode = mode
