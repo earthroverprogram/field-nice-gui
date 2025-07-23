@@ -50,6 +50,12 @@ class Datalogger:
         Format: {physical_name: num_input_channels}
         """
         # Detection
+        try:
+            # Without re-initialization, query_devices won't update
+            sd._terminate()  # noqa
+            sd._initialize()  # noqa
+        except:  # noqa
+            pass
         devices = sd.query_devices()
         phys_devices = {
             dev["name"]: dev["max_input_channels"]

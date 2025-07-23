@@ -547,6 +547,7 @@ def _refresh_device(_=None):
 
     # Update
     CM.update("select_device", value=options[idx_current], options=options)
+    CM["select_device"].update()
 
     # Check monitor
     _check_monitor()
