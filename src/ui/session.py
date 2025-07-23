@@ -521,6 +521,12 @@ def _logger_value2name(value):
     return value.split("【")[0].strip()
 
 
+def _check_monitor(_=None):
+    device_name = _logger_value2name(CM["select_device"].value)
+    n_channels = CM["detected_devices"][device_name]["n_chs"]
+    CM.update("button_monitor", props="disable", props_remove=n_channels > 0)
+
+
 def _refresh_device(_=None):
     """Refresh device table."""
     # Update device availability
@@ -541,6 +547,9 @@ def _refresh_device(_=None):
 
     # Update
     CM.update("select_device", value=options[idx_current], options=options)
+
+    # Check monitor
+    _check_monitor()
 
 
 def _monitor_device(_=None):
@@ -818,6 +827,7 @@ def _initialize_session_ui(e):
                     # No callback changing device
                     CM["select_device"] = ui.select(
                         ["Dummy"], value="Dummy", label="Device",
+                        on_change=_check_monitor
                     ).classes('flex-1')
 
                     # Pop up devices and select Dummy
@@ -832,8 +842,8 @@ def _initialize_session_ui(e):
 
                     # Let user monitor selected device
                     with ui.row().style('align-items: center; height: 56px;'):
-                        ui.button(
-                            icon="monitor",
+                        CM["button_monitor"] = ui.button(
+                            icon="monitor_heart",
                             on_click=_monitor_device
                         ).classes('w-8 h-8')
 
