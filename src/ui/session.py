@@ -219,13 +219,29 @@ def _on_change_shift(e):
     """Handle editing shift layout in table."""
     row = e.args  # props.row
     ch = row['channel']
-    dx = int(row['dx'])
-    dy = int(row['dy'])
+    try:
+        dx = int(row['dx'])
+        dy = int(row['dy'])
+    except:  # noqa:
+        return  # Do nothing, wait user to finish
     if dx == 0 and dy == 0:
         CM["shift_layout"].pop(ch, None)
     else:
         CM["shift_layout"][ch] = (dx, dy)
     _refresh_layout()
+
+
+def _on_blur_shift(e):
+    """Handle blur shift layout in table."""
+    row = e.args  # props.row
+    ch = row['channel']
+    try:
+        _ = int(row['dx'])
+        _ = int(row['dy'])
+        # Do nothing, changes already honored by _on_change_shift
+    except:  # noqa:
+        CM["shift_layout"].pop(ch, None)
+        _refresh_layout()
 
 
 def is_valid_naming(text: str) -> bool:
@@ -938,10 +954,10 @@ def _initialize_session_ui(e):
                                 v-model.number="props.row.dx"
                                 :readonly="props.row.lock_shift"
                                 @update:model-value="() => $parent.$emit('_on_change_shift', props.row)"
+                                @blur="() => $parent.$emit('_on_blur_shift', props.row)"
                             />
                         </q-td>
                     ''')
-                    CM["table_layout"].on('_on_change_shift', _on_change_shift)
 
                     CM["table_layout"].add_slot('body-cell-dy', r'''
                         <q-td key="dy" :props="props">
@@ -952,10 +968,12 @@ def _initialize_session_ui(e):
                                 v-model.number="props.row.dy"
                                 :readonly="props.row.lock_shift"
                                 @update:model-value="() => $parent.$emit('_on_change_shift', props.row)"
+                                @blur="() => $parent.$emit('_on_blur_shift', props.row)"
                             />
                         </q-td>
                     ''')
                     CM["table_layout"].on('_on_change_shift', _on_change_shift)
+                    CM["table_layout"].on('_on_blur_shift', _on_blur_shift)
 
                     CM["table_layout"].add_slot('body-cell-naming', r'''
                         <q-td key="naming" :props="props">
