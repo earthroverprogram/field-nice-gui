@@ -287,7 +287,7 @@ def _save_session(_=None):
         "datalogger": {
             "device": _logger_value2name(CM["select_device"].value),
             "datatype": CM["select_datatype"].value,
-            "sr": int(CM["number_sr"].value),
+            "samplerate": int(CM["number_sr"].value),
             "duration": int(CM["number_duration"].value)
         },
         "source": {
@@ -358,7 +358,7 @@ def _load_session(json_path, input_name):
         # Datalogger
         CM.update("select_device", _logger_name2value(data["datalogger"]["device"]))
         CM.update("select_datatype", data["datalogger"]["datatype"])
-        CM.update("number_sr", data["datalogger"]["sr"])
+        CM.update("number_sr", data["datalogger"]["samplerate"])
         CM.update("number_duration", data["datalogger"]["duration"])
 
         # Source

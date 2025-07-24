@@ -29,7 +29,7 @@
   "datalogger": {
     "device": "Dummy",
     "datatype": "float32",
-    "sr": 10000,
+    "samplerate": 10000,
     "duration": 5
   },
   "source": {
