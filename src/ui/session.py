@@ -331,7 +331,7 @@ def _save_session(_=None):
                 "shear_y": int(CM["number_sy"].value),
             },
             "function": {
-                "code": CM["code_custom"].value.strip(),
+                "code": CM["code_custom"].value.strip() + "\n",
             },
             "shift": CM["shift_layout"],
             "naming": {
