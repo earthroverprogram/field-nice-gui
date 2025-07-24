@@ -102,7 +102,7 @@ def _plot_gain_curve(fig):
     # --- If failed, show error ---
     if gains is None:
         MyPlot.error(fig, "Error Gain")
-        return False
+        CM["is_gain_valid"] = False
 
     # --- Draw gain curve ---
     ax = fig.gca()
@@ -112,7 +112,10 @@ def _plot_gain_curve(fig):
     ax.set_ylabel("Gain (dB)")
     fig.tight_layout(pad=0)
     MyPlot.apply_dark(fig)
-    return True
+    CM["is_gain_valid"] = True
+
+    # check save
+    _check_save()
 
 
 def _compute_summary():
@@ -180,12 +183,13 @@ def _compute_summary():
         gains = gains[:-1]  # Remove from layout
 
     # --- Return summary dict ---
-    return {
+    layout_dict = {
         "layout": layout,
         "gains": gains,
         "src_xy": src_xy,
         "st_dict": st_dict
     }
+    return layout_dict
 
 
 def _plot_summary(fig, layout_dict):
@@ -259,33 +263,6 @@ def _plot_summary(fig, layout_dict):
     MyPlot.apply_dark(fig)
 
 
-def _get_existing_experiments_sorted(session_path):
-    """Return list of existing experiment folder *numbers* sorted descending (int)."""
-    experiments = []
-    pattern = re.compile(r"experiment_(\d{4})$")
-    for d in session_path.iterdir():
-        if d.is_dir():
-            match = pattern.match(d.name)
-            if not match:
-                continue
-            try:
-                json_path = d / "ui_state.json"
-                with open(json_path, "r", encoding="utf-8") as fs:
-                    _ = json.load(fs)
-                number = int(match.group(1))
-                experiments.append(number)
-            except Exception:  # noqa
-                continue  # skip unreadable or malformed entries
-    return sorted(experiments, reverse=True)
-
-
-def _is_new():
-    """Return True if current selected experiment is not in session folder."""
-    number, folder = _get_experiment_folder()
-    return (CM["number_experiment"].value not in
-            _get_existing_experiments_sorted(folder.parent))
-
-
 def _refresh_summary():
     """Update summary from scratch."""
     if CBB.blocking():
@@ -343,15 +320,6 @@ def _refresh_summary():
     with CM["figure_summary_dup"]:
         _plot_summary(CM["figure_summary_dup"], summary_dict)
 
-    # Review
-    if _is_new():
-        CM.update("label_final", text="🟢 Ready to Record")
-    else:
-        CM.update("label_final", text="✅ Completed Experiment")
-    loc_string = (f'#{int(CM["number_experiment"].value):04d} '
-                  f'@ ({int(CM["number_x"].value)}, {int(CM["number_y"].value)})')
-    CM.update("text_final", text=loc_string)
-
 
 def _on_change_source_location(_=None):
     """Handle source location change."""
@@ -368,17 +336,32 @@ def _on_change_gain_select(e):
 def _on_change_gain_code(_=None):
     """Handle gain code change."""
     with CM["figure_gain"]:
-        CM["is_gain_valid"] = _plot_gain_curve(CM["figure_gain"])
+        _plot_gain_curve(CM["figure_gain"])
     _refresh_summary()
-    _check_save()
 
 
 def _on_change_summary_value(e):
     """Handle gain value change from table."""
     row = e.args  # props.row
-    ch, gain = row['channel'], round(row["gain"], 1)
+    ch, gain = row['channel'], row["gain"]
+    try:
+        gain = round(float(gain), 1)
+    except:  # noqa
+        return  # Do nothing, wait user to finish
     CM["overwrite_gain"][ch] = gain
     _refresh_summary()
+
+
+def _on_blur_summary_value(e):
+    """Handle gain value blur from table."""
+    row = e.args  # props.row
+    ch, gain = row['channel'], row["gain"]
+    try:
+        _ = round(float(gain), 1)
+        # Do nothing, changes already honored by _on_change_summary_value
+    except:  # noqa
+        CM["overwrite_gain"].pop(ch, None)
+        _refresh_summary()
 
 
 def _on_change_summary_bypass(e):
@@ -403,9 +386,37 @@ def _on_change_summary_bypass(e):
 # IO #
 ######
 
+def _get_existing_experiments_sorted(session_path):
+    """Return list of existing experiment folder *numbers* sorted descending (int)."""
+    experiments = []
+    pattern = re.compile(r"experiment_(\d{4})$")
+    for d in session_path.iterdir():
+        if d.is_dir():
+            match = pattern.match(d.name)
+            if not match:
+                continue
+            try:
+                json_path = d / "ui_state.json"
+                with open(json_path, "r", encoding="utf-8") as fs:
+                    _ = json.load(fs)
+                number = int(match.group(1))
+                experiments.append(number)
+            except Exception:  # noqa
+                continue  # skip unreadable or malformed entries
+    return sorted(experiments, reverse=True)
+
+
+def _is_new():
+    """Return True if current selected experiment is not in session folder."""
+    number, folder = _get_experiment_folder()
+    return (CM["number_experiment"].value not in
+            _get_existing_experiments_sorted(folder.parent))
+
+
 def _check_save(_=None):
     """Trigger save validation."""
     if not _is_new():
+        CM.update("label_final", text="✅ Completed Experiment")
         CM.update("button_record", props="disable")
         return
 
@@ -418,6 +429,11 @@ def _check_save(_=None):
     if not is_valid:
         CM.update("label_final", text="⚠️ Recording Disabled")
         CM.update("text_final", text="Invalid Gain")
+    else:
+        CM.update("label_final", text="🟢 Ready to Record")
+        loc_string = (f'#{int(CM["number_experiment"].value):04d} '
+                      f'@ ({int(CM["number_x"].value)}, {int(CM["number_y"].value)})')
+        CM.update("text_final", text=loc_string)
 
 
 def _number_to_dir(experiment_number):
@@ -534,7 +550,6 @@ def _load_experiment(json_path, experiment_number, post_notes=True):
 
     # Must manually refresh gain and summary
     _on_change_gain_code()
-    _refresh_summary()
 
 
 def _restore_for_new():
@@ -562,14 +577,12 @@ def _restore_for_new():
     # Manually refresh
     _refresh_summary()
 
-    # For safety
-    _check_save()
-
     # For increment
     return from_previous
 
 
-def _get_next_number(folder):
+def _allocate_new_experiment_number(folder):
+    """Return the next of max of existing."""
     existing = _get_existing_experiments_sorted(folder)
     return max(existing) + 1 if existing else 1
 
@@ -592,7 +605,9 @@ def _on_change_experiment_number(_=None):
         CM.update(key, props="readonly", props_remove=is_new)
     CM.update("input_post_notes", props="readonly", props_remove=not is_new)
     CM.update("code_gain_param", props="disable", props_remove=is_new)
-    _check_save()  # Button and Warn
+
+    # Check save
+    _check_save()
 
     # Previous button
     number = int(CM["number_experiment"].value)
@@ -610,7 +625,7 @@ def _on_change_experiment_number(_=None):
             _load_experiment(json_path, experiment_number=number)
         except Exception as e:  # noqa
             ui.notify(f'Failed to load/parse "{json_path}": {e}', color='negative')
-            CM.update("number_experiment", _get_next_number(folder.parent))
+            CM.update("number_experiment", _allocate_new_experiment_number(folder.parent))
 
         # Log the last valid selection
         CM["last_selection"] = CM['number_experiment'].value
@@ -726,11 +741,13 @@ async def _actual_record():
 
 
 def _go_previous():
+    """Go previous experiment."""
     if CM["number_experiment"].value > 1:
         CM["number_experiment"].value -= 1
 
 
 def _go_next():
+    """Go next experiment."""
     CM["number_experiment"].value += 1
 
 
@@ -753,7 +770,7 @@ def _initialize_experiment_ui(_=None):
             with ui.column().classes("flex-1"):
                 # --- Experiment Number ---
                 session_folder = DATA_DIR / lics / session
-                number_init = _get_next_number(session_folder)
+                number_init = _allocate_new_experiment_number(session_folder)
                 CM["number_experiment"] = MyUI.number_int(
                     "Experiment Number",
                     min=1, value=number_init,
@@ -813,7 +830,7 @@ def _initialize_experiment_ui(_=None):
                         ).classes("w-full").style('height: 200px;')
                     with ui.matplotlib(dpi=200, figsize=(4, 4)) \
                             .classes("flex-[6]").figure as CM["figure_gain"]:  # noqa
-                        CM["is_gain_valid"] = _plot_gain_curve(CM["figure_gain"])
+                        _plot_gain_curve(CM["figure_gain"])
 
         #################
         # Final summary #
@@ -850,10 +867,12 @@ def _initialize_experiment_ui(_=None):
                                 :step="0.1"
                                 :readonly="props.row.lock_gain || props.row.bypass"
                                 @update:model-value="() => $parent.$emit('_on_change_summary_value', props.row)"
+                                @blur="() => $parent.$emit('_on_blur_summary_value', props.row)"
                             />
                         </q-td>
                     ''')
                     CM["table_summary"].on('_on_change_summary_value', _on_change_summary_value)
+                    CM["table_summary"].on('_on_blur_summary_value', _on_blur_summary_value)
 
                     CM["table_summary"].add_slot('body-cell-bypass', r'''
                         <q-td key="bypass" :props="props">
