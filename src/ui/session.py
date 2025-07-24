@@ -194,7 +194,8 @@ def _reset_shift_trailing():
         # Reset trailing channel
         min_ch = len(layout) + 1
         CM["number_st_ch"].min = min_ch  # Must go first
-        CM.update("number_st_ch", min_ch)
+        if CM["number_st_ch"] and CM["number_st_ch"].value < min_ch:
+            CM.update("number_st_ch", min_ch)
 
 
 def _on_change_layout_params(_=None):
