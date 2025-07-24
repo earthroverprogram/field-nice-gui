@@ -507,6 +507,11 @@ def _on_change_st(e):
         CM.update(key, props="disable", props_remove=enabled)
 
 
+##################
+# Logger Monitor #
+##################
+
+
 def _logger_name2value(name):
     """Format options in logger select."""
     n_ch = CM["detected_devices"][name]["n_chs"]
