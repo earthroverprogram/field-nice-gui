@@ -103,16 +103,16 @@ def _plot_gain_curve(fig):
     if gains is None:
         MyPlot.error(fig, "Error Gain")
         CM["is_gain_valid"] = False
-
-    # --- Draw gain curve ---
-    ax = fig.gca()
-    ax.grid(True, color=MyUI.gray_color(), linewidth=0.5)
-    ax.plot(distances, gains, color=MyUI.primary_color(), zorder=10, lw=2)
-    ax.set_xlabel("Distance (cm)")
-    ax.set_ylabel("Gain (dB)")
-    fig.tight_layout(pad=0)
-    MyPlot.apply_dark(fig)
-    CM["is_gain_valid"] = True
+    else:
+        # --- Draw gain curve ---
+        ax = fig.gca()
+        ax.grid(True, color=MyUI.gray_color(), linewidth=0.5)
+        ax.plot(distances, gains, color=MyUI.primary_color(), zorder=10, lw=2)
+        ax.set_xlabel("Distance (cm)")
+        ax.set_ylabel("Gain (dB)")
+        fig.tight_layout(pad=0)
+        MyPlot.apply_dark(fig)
+        CM["is_gain_valid"] = True
 
     # check save
     _check_save()
