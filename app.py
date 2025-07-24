@@ -15,7 +15,7 @@ from src.ui.view import initialize as view_initialize
 # ------------------------
 # Static dark mode setup
 # ------------------------
-GS.dark_mode = 'dark' in sys.argv
+GS.dark_mode = 'dark' in " ".join(sys.argv).lower()
 
 # ------------------------
 # Theme colors and CSS
