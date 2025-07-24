@@ -228,8 +228,14 @@ def _on_change_shift(e):
 
 
 def is_valid_naming(text: str) -> bool:
-    """Name format validation: XX.XX.XX"""
-    return bool(re.fullmatch(r'[^.]+\.[^.]+\.[^.]+', text))
+    """Name format validation: A.B.C with no spaces and valid template."""
+    if not re.fullmatch(r'\S+\.\S+\.\S+', text):
+        return False
+    try:
+        text.format(CH=1)
+        return True
+    except:  # noqa
+        return False
 
 
 def _on_change_naming_formatter(_=None):
@@ -246,7 +252,7 @@ def _on_change_naming_formatter(_=None):
 def _on_change_overwrite_naming(e):
     """Handle naming change from table."""
     row = e.args  # props.row
-    ch, new_naming = row['channel'], row["naming"].strip()
+    ch, new_naming = row['channel'], row["naming"]
     default = CM["input_naming"].value.format(CH=ch)
     if new_naming == default:
         CM["overwrite_naming"].pop(ch, None)
@@ -328,7 +334,7 @@ def _save_session(_=None):
             },
             "shift": CM["shift_layout"],
             "naming": {
-                "template": CM["input_naming"].value.strip(),
+                "template": CM["input_naming"].value,
                 "overwrite": CM["overwrite_naming"]
             }
         },
@@ -348,7 +354,8 @@ def _save_session(_=None):
             "enabled": CM["checkbox_st"].value,
             "shift_x": int(CM["number_st_x"].value),
             "shift_y": int(CM["number_st_y"].value),
-            "channel": int(CM["number_st_ch"].value)
+            "channel": int(CM["number_st_ch"].value),
+            "naming": CM["input_st_naming"].value
         },
         "conditions": {
             "weather": CM["select_weather"].value,
@@ -408,6 +415,7 @@ def _load_session(json_path, input_name):
             int(ch): value
             for ch, value in data["layout"]["naming"]["overwrite"].items()
         }
+
         # Datalogger
         CM.update("select_device", _logger_name2value(data["datalogger"]["device"]))
         CM.update("select_datatype", data["datalogger"]["datatype"])
@@ -428,6 +436,7 @@ def _load_session(json_path, input_name):
         # Using 1 here and update layer by _on_change_layout_params().
         CM["number_st_ch"].min = 1
         CM.update("number_st_ch", data["source_trailing"]["channel"])
+        CM.update("input_st_naming", data["source_trailing"]["naming"])
 
         # Conditions
         CM.update("select_weather", data["conditions"]["weather"])
@@ -557,8 +566,17 @@ def _on_change_name_format(e):
 def _on_change_st(e):
     """Source trailing checkbox disabled/enabled."""
     enabled = e.value
-    for key in ["number_st_x", "number_st_y", "number_st_ch"]:
+    for key in ["number_st_x", "number_st_y", "number_st_ch",
+                "input_st_naming", "input_st_naming_result"]:
         CM.update(key, props="disable", props_remove=enabled)
+
+
+def _on_change_naming_formatter_st(_=None):
+    """Handle user update of naming formatter of source trailing."""
+    if not CM["input_st_naming"].validate():
+        CM.update("input_st_naming", "ST.LOM{CH:02d}.Z")
+    CM.update("input_st_naming_result",
+              CM["input_st_naming"].value.format(CH=int(CM["number_st_ch"].value)))
 
 
 ##################
@@ -907,7 +925,7 @@ def _initialize_session_ui(e):
                         rows=[],
                         row_key='channel',
                         pagination=8,
-                    ).classes('flex-1 q-table--col-auto-width')
+                    ).classes('flex-[4] q-table--col-auto-width')
 
                     # Callback of numbers in table
                     CM["table_layout"].add_slot('body-cell-dx', r'''
@@ -946,7 +964,7 @@ def _initialize_session_ui(e):
                                 v-model="props.row.naming"
                                 :readonly="props.row.lock_shift"
                                 :rules="[
-                                    val => !!val && val.split('.').length === 3 && val.split('.').every(s => s.trim() !== '') || 'Invalid. Expecting *.*.*'
+                                  val => !!val && /^\S+\.\S+\.\S+$/.test(val) || 'Invalid. Expecting *.*.*'
                                 ]"
                                 hide-bottom-space
                                 @blur="() => $parent.$emit('_on_change_overwrite_naming', props.row)"
@@ -956,7 +974,7 @@ def _initialize_session_ui(e):
                     CM["table_layout"].on('_on_change_overwrite_naming', _on_change_overwrite_naming)
 
                     # Figure
-                    CM["figure_layout"] = ui.matplotlib(dpi=200, figsize=(4, 4)).classes("flex-1").figure
+                    CM["figure_layout"] = ui.matplotlib(dpi=200, figsize=(4, 4)).classes("flex-[3]").figure
 
         with MyUI.row():
             ##############
@@ -1016,9 +1034,22 @@ def _initialize_session_ui(e):
             with MyUI.cap_card("Source Trailing", full=False):
                 CM["checkbox_st"] = MyUI.checkbox(
                     "Enabled", value=True, on_change=_on_change_st)
-                CM["number_st_x"] = MyUI.number_int("Shift X (cm)", value=0)
-                CM["number_st_y"] = MyUI.number_int("Shift Y (cm)", value=10)
-                CM["number_st_ch"] = MyUI.number_int("Channel", min=8, value=8)
+                with MyUI.row():
+                    CM["number_st_x"] = MyUI.number_int("Shift X (cm)", value=0, full=False)
+                    CM["number_st_y"] = MyUI.number_int("Shift Y (cm)", value=10, full=False)
+                CM["number_st_ch"] = MyUI.number_int("Channel", min=8, value=8,
+                                                     on_change=_on_change_naming_formatter_st)
+                with MyUI.row():
+                    CM["input_st_naming"] = ui.input(
+                        label="Naming Formatter",
+                        value="ST.LOM{CH:02d}.Z",
+                        validation={"Invalid formatter": is_valid_naming}
+                    ).classes('flex-1').on("blur", _on_change_naming_formatter_st)
+                    CM["input_st_naming_result"] = ui.input(
+                        label="Naming Result",
+                        value="ST.LOM?.Z"
+                    ).classes('flex-1').props("readonly")
+                    _on_change_naming_formatter_st()
 
         ###############
         # Option Card #

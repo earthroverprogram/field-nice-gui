@@ -37,7 +37,8 @@
     "enabled": true,
     "shift_x": 0,
     "shift_y": 10,
-    "channel": 8
+    "channel": 8,
+    "naming": "ST.LOM{CH:02d}.Z"
   },
   "conditions": {
     "weather": "Unknown",
