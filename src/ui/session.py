@@ -146,14 +146,26 @@ def _refresh_layout():
         CM["table_layout"].clear()
         new_rows = []
         for idx, (x, y) in enumerate(layout):
-            shift = CM["shift_layout"].get(idx + 1, (0, 0))
+            # Naming
+            ch = idx + 1
+            default = CM["input_naming"].value.format(CH=ch)
+            naming = CM["overwrite_naming"].get(ch, default)
+            if not is_valid_naming(naming):
+                ui.notify("Impossible Error. Report for debugging.", color="negative")
+                naming = "E.RR.OR"
+
+            # Shift
+            shift = CM["shift_layout"].get(ch, (0, 0))
             dx, dy = shift
+
+            # Row
             new_rows.append({
-                'channel': idx + 1,
+                'channel': ch,
                 'x': x,
                 'y': y,
                 'dx': dx,
                 'dy': dy,
+                'naming': naming,
                 'lock_shift': not _is_new()
             })
         CM["table_layout"].rows = new_rows
@@ -213,6 +225,38 @@ def _on_change_shift(e):
     else:
         CM["shift_layout"][ch] = (dx, dy)
     _refresh_layout()
+
+
+def is_valid_naming(text: str) -> bool:
+    """Name format validation: XX.XX.XX"""
+    return bool(re.fullmatch(r'[^.]+\.[^.]+\.[^.]+', text))
+
+
+def _on_change_naming_formatter(_=None):
+    """Handle user update of naming formatter."""
+    if CBB.blocking():
+        return
+    if not CM["input_naming"].validate():
+        CM.update("input_naming", "FX.LOM{CH:02d}.Z")
+    if _is_new():
+        CM["overwrite_naming"] = {}
+    _refresh_layout()
+
+
+def _on_change_overwrite_naming(e):
+    """Handle naming change from table."""
+    row = e.args  # props.row
+    ch, new_naming = row['channel'], row["naming"].strip()
+    default = CM["input_naming"].value.format(CH=ch)
+    if new_naming == default:
+        CM["overwrite_naming"].pop(ch, None)
+    else:
+        if is_valid_naming(new_naming):
+            CM["overwrite_naming"][ch] = new_naming
+        else:
+            # Restore and refresh UI
+            row["naming"] = default
+            CM["table_layout"].rows = CM["table_layout"].rows
 
 
 ######
@@ -282,7 +326,11 @@ def _save_session(_=None):
             "function": {
                 "code": CM["code_custom"].value.strip(),
             },
-            "shift": CM["shift_layout"]
+            "shift": CM["shift_layout"],
+            "naming": {
+                "template": CM["input_naming"].value.strip(),
+                "overwrite": CM["overwrite_naming"]
+            }
         },
         "datalogger": {
             "device": _logger_value2name(CM["select_device"].value),
@@ -353,7 +401,12 @@ def _load_session(json_path, input_name):
         # Ensure keys are int and values are (int, int) tuples
         CM["shift_layout"] = {
             int(ch): tuple(map(int, shift))
-            for ch, shift in CM["shift_layout"].items()
+            for ch, shift in data["layout"]["shift"].items()
+        }
+        CM.update("input_naming", data["layout"]["naming"]["template"])
+        CM["overwrite_naming"] = {
+            int(ch): value
+            for ch, value in data["layout"]["naming"]["overwrite"].items()
         }
         # Datalogger
         CM.update("select_device", _logger_name2value(data["datalogger"]["device"]))
@@ -391,7 +444,8 @@ def _load_session(json_path, input_name):
         CM.update("input_time", data["create_time"])
 
     # Must manually refresh
-    _on_change_layout_params()
+    _on_change_layout_params()  # Will discard location shifting in New
+    _on_change_naming_formatter()  # Will discard naming overwriting in New
 
 
 def _restore_for_new():
@@ -780,11 +834,23 @@ def _initialize_session_ui(e):
         ###############
         with MyUI.cap_card("Layout"):
             with MyUI.row():
-                # Method
-                CM["select_layout"] = ui.select(
-                    ["GRID-1D/2D", "FUNCTION"],
-                    label="Method", value="GRID-1D/2D",
-                    on_change=_on_change_select_layout).classes('w-full')
+                with MyUI.row():
+                    # Shift: Define at beginning to void null reference
+                    CM["shift_layout"] = {}  # Data
+                    CM["overwrite_naming"] = {}  # Data
+
+                    # Method
+                    CM["select_layout"] = ui.select(
+                        ["GRID-1D/2D", "FUNCTION"],
+                        label="Positioning Method", value="GRID-1D/2D",
+                        on_change=_on_change_select_layout).classes('flex-1')
+
+                    # Naming
+                    CM["input_naming"] = ui.input(
+                        label="Naming Formatter (Network.Station.Component)",
+                        value="FX.LOM{CH:02d}.Z",
+                        validation={"Invalid formatter": is_valid_naming}
+                    ).classes('flex-1').on("blur", _on_change_naming_formatter)
 
                 # --- GRID-1D/2D ---
                 with MyUI.row() as CM["container_grid"]:
@@ -826,7 +892,7 @@ def _initialize_session_ui(e):
                 ).classes("w-full hidden").style('height: 160px;')
 
             with MyUI.expansion(f"Layout Details: 【 7 Channels 】") as CM["expansion_layout"]:
-                with MyUI.row(gap=10):
+                with MyUI.row(gap=4):
                     # --- Table and Figure ---
                     # Table
                     CM["table_layout"] = ui.table(
@@ -836,14 +902,12 @@ def _initialize_session_ui(e):
                             {'name': 'y', 'label': 'Y (cm)', 'field': 'y', 'align': 'left'},
                             {'name': 'dx', 'label': 'Shift X (cm)', 'field': 'dx', 'align': 'left'},
                             {'name': 'dy', 'label': 'Shift Y (cm)', 'field': 'dy', 'align': 'left'},
+                            {'name': 'naming', 'label': 'Naming', 'field': 'naming', 'align': 'left'},
                         ],
                         rows=[],
                         row_key='channel',
                         pagination=8,
                     ).classes('flex-1 q-table--col-auto-width')
-
-                    # Shift
-                    CM["shift_layout"] = {}  # Data
 
                     # Callback of numbers in table
                     CM["table_layout"].add_slot('body-cell-dx', r'''
@@ -873,6 +937,23 @@ def _initialize_session_ui(e):
                         </q-td>
                     ''')
                     CM["table_layout"].on('_on_change_shift', _on_change_shift)
+
+                    CM["table_layout"].add_slot('body-cell-naming', r'''
+                        <q-td key="naming" :props="props">
+                            <q-input
+                                dense
+                                class="w-full max-w-[120px]"
+                                v-model="props.row.naming"
+                                :readonly="props.row.lock_shift"
+                                :rules="[
+                                    val => !!val && val.split('.').length === 3 && val.split('.').every(s => s.trim() !== '') || 'Invalid. Expecting *.*.*'
+                                ]"
+                                hide-bottom-space
+                                @blur="() => $parent.$emit('_on_change_overwrite_naming', props.row)"
+                            />
+                        </q-td>
+                    ''')
+                    CM["table_layout"].on('_on_change_overwrite_naming', _on_change_overwrite_naming)
 
                     # Figure
                     CM["figure_layout"] = ui.matplotlib(dpi=200, figsize=(4, 4)).classes("flex-1").figure

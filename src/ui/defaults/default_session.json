@@ -15,7 +15,11 @@
     "function": {
       "code": "def custom_layout():\n    \"\"\"Python function to generate user-defined layout.\"\"\"\n    import numpy as np  # Must import numpy within function\n    theta = np.linspace(0, 2 * np.pi, 12, endpoint=False)\n    x = np.cos(theta) * 100\n    y = np.sin(theta) * 100\n    return np.stack([x, y], axis=1)  # Must return an (N, 2) array\n"
     },
-    "shift": {}
+    "shift": {},
+    "naming": {
+      "template": "FX.LOM{CH:02d}.Z",
+      "overwrite": {}
+    }
   },
   "datalogger": {
     "device": "Dummy",

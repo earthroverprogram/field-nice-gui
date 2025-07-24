@@ -24,6 +24,10 @@
         0,
         50
       ]
+    },
+    "naming": {
+      "template": "FX.LOM{CH:02d}.Z",
+      "overwrite": {}
     }
   },
   "datalogger": {
