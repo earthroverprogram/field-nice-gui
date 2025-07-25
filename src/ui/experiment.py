@@ -427,7 +427,10 @@ def _check_save(_=None):
     device_channels = set(range(1, n_device_channels + 1))
     request_channels = set(CM["session_dict"]["naming"].keys())
     diff = set(request_channels) - set(device_channels)
-    is_channel_enough = len(diff) == 0 or not CM["checkbox_check_ch"].value
+
+    is_channel_enough = len(diff) == 0
+    if CM["checkbox_check_ch"]:
+        is_channel_enough = is_channel_enough or not CM["checkbox_check_ch"].value
     is_valid = CM["is_gain_valid"] and is_channel_enough
 
     # --- Save button enable/disable ---
