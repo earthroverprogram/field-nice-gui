@@ -609,10 +609,14 @@ def _on_change_st_channel(_=None):
     _check_channels()
 
 
+##################################
+# Logger Validation & Monitoring #
+##################################
+
+
 def _check_channels():
     """Check if device provides enough channels."""
-    device_name = _logger_value2name(CM["select_device"].value)
-    n_ch_device = CM["detected_devices"][device_name]["n_chs"]
+    device_name, n_ch_device = _get_selected_device_nch()
     chs_device = list(range(1, n_ch_device + 1))
 
     n_ch_layout = len(_compute_layout())
@@ -646,11 +650,6 @@ def _check_channels():
         CM.update("text_check_ch", value="\n  " + "\n\n  ".join(lines))
 
 
-##################
-# Logger Monitor #
-##################
-
-
 def _logger_name2value(name):
     """Format options in logger select."""
     n_ch = CM["detected_devices"][name]["n_chs"]
@@ -665,9 +664,16 @@ def _logger_value2name(value):
     return value.split("【")[0].strip()
 
 
-def _check_monitor(_=None):
+def _get_selected_device_nch():
+    """Get name and channels of selected device."""
     device_name = _logger_value2name(CM["select_device"].value)
     n_channels = CM["detected_devices"][device_name]["n_chs"]
+    return device_name, n_channels
+
+
+def _check_monitor(_=None):
+    """Check if monitor is available."""
+    device_name, n_channels = _get_selected_device_nch()
     CM.update("button_monitor", props="disable", props_remove=n_channels > 0)
     _check_channels()
 
@@ -702,9 +708,7 @@ def _monitor_device(_=None):
     """Open a dialog to monitor device signal in real time (time domain or frequency domain)."""
 
     # --- Step 1: Get current device settings from UI ---
-    device_name = _logger_value2name(CM["select_device"].value)
-    info = CM["detected_devices"][device_name]
-    n_channels = info["n_chs"]
+    device_name, n_channels = _get_selected_device_nch()
     if n_channels == 0:
         ui.notify(f"Device '{device_name}' is not detected.", color='warning')
         return
@@ -852,28 +856,22 @@ def _get_trailing():
         return None
 
 
-def _get_channel_to_idx():
-    """Return a mapping from channel number to its row index in table."""
-
-    # Get main channels from table rows (assumes channel numbers start at 1)
-    num_main_channels = len(CM["table_layout"].rows)
-    channels = list(range(1, num_main_channels + 1))
-
-    # Optionally add trailing channel
-    if CM["checkbox_st"].value:
-        trailing_channel = CM["number_st_ch"].value
-        channels.append(trailing_channel)
-
-    # Map channel number to index (0-based)
-    return {ch: idx for idx, ch in enumerate(channels)}
+def _get_channel_naming():
+    """Return a mapping from channel number to its naming."""
+    ch_naming = {}
+    for row in CM["table_layout"].rows:
+        ch_naming[row["channel"]] = row["naming"]
+    return ch_naming
 
 
 def get_session_dict():
     """Return everything about session."""
+    device_name, n_channels = _get_selected_device_nch()
     return {
         "layout": _compute_layout(),
         "st_dict": _get_trailing(),
-        "channel_to_idx": _get_channel_to_idx()
+        "naming": _get_channel_naming(),
+        "device": {"name": device_name, "n_channels": n_channels}
     }
 
 
