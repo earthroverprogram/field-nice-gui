@@ -190,7 +190,7 @@ class MyUI:
         return ui.row().classes(f'w-full justify-between gap-{gap}')
 
     @staticmethod
-    def expansion(text: str):
+    def expansion(text: str, value=False):
         """ui.expansion() with custom toggle icon."""
 
         def _on_change_expansion(e):
@@ -199,6 +199,7 @@ class MyUI:
 
         return ui.expansion(
             text,
+            value=value,
             icon="keyboard_arrow_down",
             on_value_change=_on_change_expansion,
         ).classes("w-full").props("expand-icon=none")
