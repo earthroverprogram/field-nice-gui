@@ -42,7 +42,7 @@ DEFAULT_LAYOUT_CODE = '''def custom_layout():
 ##########
 
 
-def compute_layout(plus_shift=True):
+def _compute_layout(plus_shift=True):
     """Compute layout from Method."""
     grid = CM["select_layout"].value.upper() == "GRID-1D/2D"
     layout = None
@@ -125,7 +125,7 @@ def _plot_layout(fig, layout):
 
 def _refresh_layout():
     """Update layout from scratch."""
-    layout = compute_layout()
+    layout = _compute_layout()
     if layout is None:
         # Expansion
         CM["expansion_layout"].text = "⚠️ Error Layout"
@@ -185,7 +185,7 @@ def _refresh_layout():
 
 def _reset_shift_trailing():
     """Reset shift of trailing."""
-    layout = compute_layout(plus_shift=False)
+    layout = _compute_layout(plus_shift=False)
 
     # Clear shift
     CM["shift_layout"] = {}
@@ -615,7 +615,7 @@ def _check_channels():
     n_ch_device = CM["detected_devices"][device_name]["n_chs"]
     chs_device = list(range(1, n_ch_device + 1))
 
-    n_ch_layout = len(compute_layout())
+    n_ch_layout = len(_compute_layout())
     chs_layout = list(range(1, n_ch_layout + 1))
     chs_required = chs_layout.copy()
 
@@ -840,7 +840,7 @@ def _monitor_device(_=None):
 ##################
 
 
-def get_trailing():
+def _get_trailing():
     """Return trailing information."""
     if CM["checkbox_st"].value:
         return {
@@ -852,7 +852,7 @@ def get_trailing():
         return None
 
 
-def get_channel_to_idx():
+def _get_channel_to_idx():
     """Return a mapping from channel number to its row index in table."""
 
     # Get main channels from table rows (assumes channel numbers start at 1)
@@ -866,6 +866,15 @@ def get_channel_to_idx():
 
     # Map channel number to index (0-based)
     return {ch: idx for idx, ch in enumerate(channels)}
+
+
+def get_session_dict():
+    """Return everything about session."""
+    return {
+        "layout": _compute_layout(),
+        "st_dict": _get_trailing(),
+        "channel_to_idx": _get_channel_to_idx()
+    }
 
 
 ###########################
