@@ -30,6 +30,13 @@
       "overwrite": {}
     }
   },
+  "source_trailing": {
+    "enabled": true,
+    "shift_x": 0,
+    "shift_y": 10,
+    "channel": 16,
+    "naming": "ST.LOM{CH:02d}.Z"
+  },
   "datalogger": {
     "device": "Dummy",
     "datatype": "float32",
@@ -41,13 +48,6 @@
     "direction": "-Z",
     "coupling": "Plate",
     "repeats": 5
-  },
-  "source_trailing": {
-    "enabled": true,
-    "shift_x": 0,
-    "shift_y": 10,
-    "channel": 16,
-    "naming": "ST.LOM{CH:02d}.Z"
   },
   "conditions": {
     "weather": "Unknown",
