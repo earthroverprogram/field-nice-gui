@@ -356,6 +356,13 @@ def _save_session(_=None):
                 "overwrite": CM["overwrite_naming"]
             }
         },
+        "source_trailing": {
+            "enabled": CM["checkbox_st"].value,
+            "shift_x": int(CM["number_st_x"].value),
+            "shift_y": int(CM["number_st_y"].value),
+            "channel": int(CM["number_st_ch"].value),
+            "naming": CM["input_st_naming"].value
+        },
         "datalogger": {
             "device": _logger_value2name(CM["select_device"].value),
             "datatype": CM["select_datatype"].value,
@@ -367,13 +374,6 @@ def _save_session(_=None):
             "direction": CM["select_direction"].value,
             "coupling": CM["select_coupling"].value,
             "repeats": int(CM["number_repeats"].value)
-        },
-        "source_trailing": {
-            "enabled": CM["checkbox_st"].value,
-            "shift_x": int(CM["number_st_x"].value),
-            "shift_y": int(CM["number_st_y"].value),
-            "channel": int(CM["number_st_ch"].value),
-            "naming": CM["input_st_naming"].value
         },
         "conditions": {
             "weather": CM["select_weather"].value,
@@ -434,6 +434,16 @@ def _load_session(json_path, input_name):
             for ch, value in data["layout"]["naming"]["overwrite"].items()
         }
 
+        # Source Trailing
+        CM.update("checkbox_st", data["source_trailing"]["enabled"])
+        CM.update("number_st_x", data["source_trailing"]["shift_x"])
+        CM.update("number_st_y", data["source_trailing"]["shift_y"])
+        # We didn't save min, so cannot restore it.
+        # Using 1 here and update layer by _on_change_layout_params().
+        CM["number_st_ch"].min = 1
+        CM.update("number_st_ch", data["source_trailing"]["channel"])
+        CM.update("input_st_naming", data["source_trailing"]["naming"])
+
         # Datalogger
         CM.update("select_device", _logger_name2value(data["datalogger"]["device"]))
         CM.update("select_datatype", data["datalogger"]["datatype"])
@@ -445,16 +455,6 @@ def _load_session(json_path, input_name):
         CM.update("select_direction", data["source"]["direction"])
         CM.update("select_coupling", data["source"]["coupling"])
         CM.update("number_repeats", data["source"]["repeats"])
-
-        # Source Trailing
-        CM.update("checkbox_st", data["source_trailing"]["enabled"])
-        CM.update("number_st_x", data["source_trailing"]["shift_x"])
-        CM.update("number_st_y", data["source_trailing"]["shift_y"])
-        # We didn't save min, so cannot restore it.
-        # Using 1 here and update layer by _on_change_layout_params().
-        CM["number_st_ch"].min = 1
-        CM.update("number_st_ch", data["source_trailing"]["channel"])
-        CM.update("input_st_naming", data["source_trailing"]["naming"])
 
         # Conditions
         CM.update("select_weather", data["conditions"]["weather"])
