@@ -611,9 +611,6 @@ def _on_change_st_channel(_=None):
 
 def _check_channels():
     """Check if device provides enough channels."""
-    if CM["checkbox_st"] is None:
-        return  # Initialize stage
-
     device_name = _logger_value2name(CM["select_device"].value)
     n_ch_device = CM["detected_devices"][device_name]["n_chs"]
     chs_device = list(range(1, n_ch_device + 1))
@@ -749,6 +746,8 @@ def _monitor_device(_=None):
                                         min=0, max=samplerate // 2,
                                         step=100).classes("flex-1")
             checkbox_freq = MyUI.checkbox("Frequency Domain", value=False, full=False)
+            number_min_freq.bind_enabled_from(checkbox_freq, "value")
+            number_max_freq.bind_enabled_from(checkbox_freq, "value")
 
         # Plot and control
         fig = ui.matplotlib(figsize=(6, 1.5 * max(n_channels / 2, 3))).classes("w-full self-center").figure
@@ -1050,10 +1049,36 @@ def _initialize_session_ui(e):
                     CM["figure_layout"] = ui.matplotlib(dpi=200, figsize=(4, 4)).classes("flex-[3]").figure
 
         with MyUI.row():
+            ###################
+            # Source Trailing #
+            ###################
+            height_px = 310
+            with MyUI.cap_card("Source Trailing", full=False, height_px=height_px):
+                with MyUI.row():
+                    CM["checkbox_st"] = MyUI.checkbox(
+                        "Conduct Source Training", value=True, on_change=_on_change_st)
+                    ui.input().style('visibility: hidden')  # Dummy for alignment
+                with MyUI.row():
+                    CM["number_st_x"] = MyUI.number_int("Shift X (cm)", value=0, full=False)
+                    CM["number_st_y"] = MyUI.number_int("Shift Y (cm)", value=10, full=False)
+                CM["number_st_ch"] = MyUI.number_int("Channel", min=8, value=8,
+                                                     on_change=_on_change_st_channel)
+                with MyUI.row():
+                    CM["input_st_naming"] = ui.input(
+                        label="Naming Formatter",
+                        value="ST.LOM{CH:02d}.Z",
+                        validation={"Invalid formatter": is_valid_naming}
+                    ).classes('flex-1').on("blur", _on_change_naming_formatter_st)
+                    CM["input_st_naming_result"] = ui.input(
+                        label="Naming Result",
+                        value="ST.LOM?.Z"
+                    ).classes('flex-1').props("readonly")
+                    _on_change_naming_formatter_st()
+
             ##############
             # Datalogger #
             ##############
-            with MyUI.cap_card("Datalogger", full=False):
+            with MyUI.cap_card("Datalogger", full=False, height_px=height_px):
                 # --- Datalogger ---
                 CM["detected_devices"] = {}
                 with MyUI.row(gap=4):
@@ -1089,7 +1114,7 @@ def _initialize_session_ui(e):
             ##########
             # Source #
             ##########
-            with MyUI.cap_card("Source", full=False):
+            with MyUI.cap_card("Source", full=False, height_px=height_px):
                 CM["select_excitation"] = ui.select(
                     SESSION_OPTIONS["excitation"], value=SESSION_OPTIONS["excitation"][0],
                     label="Excitation").classes('w-full')
@@ -1100,29 +1125,6 @@ def _initialize_session_ui(e):
                     SESSION_OPTIONS["coupling"], value=SESSION_OPTIONS["coupling"][0],
                     label="Coupling").classes('w-full')
                 CM["number_repeats"] = MyUI.number_int("Repeats", min=1, value=5)
-
-            ###################
-            # Source Trailing #
-            ###################
-            with MyUI.cap_card("Source Trailing", full=False):
-                CM["checkbox_st"] = MyUI.checkbox(
-                    "Enabled", value=True, on_change=_on_change_st)
-                with MyUI.row():
-                    CM["number_st_x"] = MyUI.number_int("Shift X (cm)", value=0, full=False)
-                    CM["number_st_y"] = MyUI.number_int("Shift Y (cm)", value=10, full=False)
-                CM["number_st_ch"] = MyUI.number_int("Channel", min=8, value=8,
-                                                     on_change=_on_change_st_channel)
-                with MyUI.row():
-                    CM["input_st_naming"] = ui.input(
-                        label="Naming Formatter",
-                        value="ST.LOM{CH:02d}.Z",
-                        validation={"Invalid formatter": is_valid_naming}
-                    ).classes('flex-1').on("blur", _on_change_naming_formatter_st)
-                    CM["input_st_naming_result"] = ui.input(
-                        label="Naming Result",
-                        value="ST.LOM?.Z"
-                    ).classes('flex-1').props("readonly")
-                    _on_change_naming_formatter_st()
 
         ###############
         # Option Card #
