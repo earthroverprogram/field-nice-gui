@@ -17,7 +17,7 @@ from matplotlib.colors import Normalize
 from nicegui import ui
 
 from src.ui import GS, DATA_DIR
-from src.ui.session import compute_layout, get_trailing, get_channel_to_idx
+from src.ui.session import get_session_dict
 from src.ui.utils import ControlManager, MyPlot, MyUI, CallbackBlocker, ThreeImageViewer
 
 # --- UI Control Registry ---
@@ -122,7 +122,7 @@ def _compute_summary():
     """Compute summary of final experiment layout."""
 
     # --- Compute layout ---
-    layout = compute_layout()
+    layout = CM["session_dict"]["layout"]
     if layout is None:
         ui.notify("Impossible Error. Report for debugging.", color="negative")
         return None
@@ -131,7 +131,7 @@ def _compute_summary():
     src_xy = np.array([CM["number_x"].value, CM["number_y"].value], dtype=int)
 
     # --- Compute trailing (if any) ---
-    st_dict = get_trailing()
+    st_dict = CM["session_dict"]["st_dict"]
     layout_with_st = layout
     if st_dict:
         shift_xy = np.array([st_dict["shift_x"], st_dict["shift_y"]], dtype=int)
@@ -172,7 +172,7 @@ def _compute_summary():
 
     # --- Overwrite gains if manually set ---
     if CM["overwrite_gain"]:
-        ch2idx = get_channel_to_idx()
+        ch2idx = CM["session_dict"]["channel2idx"]
         for ch, gain in CM["overwrite_gain"].items():
             if ch in ch2idx and ch2idx[ch] < len(gains):
                 gains[ch2idx[ch]] = gain
@@ -285,7 +285,7 @@ def _refresh_summary():
 
         # Expansion
         CM["expansion_summary"].text = \
-            f"Summary Details: 【 {len(get_channel_to_idx())} Channels 】"
+            f"Summary Details: 【 {len(CM['session_dict']['channel_to_idx'])} Channels 】"
         # Table
         new_rows = []
         for idx, ((x, y), gain) in enumerate(
@@ -416,8 +416,11 @@ def _is_new():
 def _check_save(_=None):
     """Trigger save validation."""
     if not _is_new():
-        CM.update("label_final", text="✅ Completed Experiment")
         CM.update("button_record", props="disable")
+        CM.update("label_final", text="✅ Completed Experiment")
+        loc_string = (f'#{int(CM["number_experiment"].value):04d} '
+                      f'@ ({int(CM["number_x"].value)}, {int(CM["number_y"].value)})')
+        CM.update("text_final", text=loc_string)
         return
 
     is_valid = CM["is_gain_valid"]
@@ -606,9 +609,6 @@ def _on_change_experiment_number(_=None):
     CM.update("input_post_notes", props="readonly", props_remove=not is_new)
     CM.update("code_gain_param", props="disable", props_remove=is_new)
 
-    # Check save
-    _check_save()
-
     # Previous button
     number = int(CM["number_experiment"].value)
     CM.update("button_prev", props="disable", props_remove=number > 1)
@@ -637,6 +637,9 @@ def _on_change_experiment_number(_=None):
         if from_previous:
             CM["number_x"].value += CM["number_inc_x"].value
             CM["number_y"].value += CM["number_inc_y"].value
+
+    # Check save
+    _check_save()
 
     # 4. Preview
     fallbacks = ["src/ui/defaults/placeholder.png"] * 3
@@ -765,6 +768,9 @@ def _initialize_experiment_ui(_=None):
         if session == "<NEW>":
             ui.label('⚠️ Please select a Session.').classes('text-xl')
             return
+
+        # Get everything of session
+        CM["session_dict"] = get_session_dict()
 
         with MyUI.row():
             with ui.column().classes("flex-1"):
@@ -933,16 +939,16 @@ def _initialize_experiment_ui(_=None):
                             f"display: none; background-color: {MyUI.bg_color()}; min-width: 400px;"
                         )
 
-                    # Source increment
-                    ui.separator()
-                    ui.label("Source Increment").classes("w-full")
-                    with MyUI.row():
-                        CM["number_inc_x"] = MyUI.number_int("Incr X (cm)", value=10, full=False)
-                        CM["number_inc_y"] = MyUI.number_int("Incr Y (cm)", value=0, full=False)
+                    # Check channels
+                    CM["checkbox_check_ch"] = MyUI.checkbox("Ensure Enough Channels", value=True, full=True)
 
                     # Go next after record
-                    ui.separator()
-                    CM["checkbox_next"] = MyUI.checkbox("Go Next after Record", value=False, full=True)
+                    CM["checkbox_next"] = MyUI.checkbox("Go Next after Recording", value=True, full=True)
+
+                    # Source increment
+                    with MyUI.row():
+                        CM["number_inc_x"] = MyUI.number_int("Src Incr X (cm)", value=10, full=False)
+                        CM["number_inc_y"] = MyUI.number_int("Src Incr Y (cm)", value=0, full=False)
 
             # --- Record ---
             with ui.column().classes('flex-[6]'):
@@ -973,7 +979,7 @@ def _initialize_experiment_ui(_=None):
                     CM["figure_summary_dup"] = ui.matplotlib(dpi=200, figsize=(4, 4)).classes("h-full").figure
 
         # Preview
-        with MyUI.expansion("Output Preview").classes("w-full"):
+        with MyUI.expansion("Output Preview", value=True).classes("w-full"):
             CM["previewer"] = ThreeImageViewer()
 
     # Safe call
