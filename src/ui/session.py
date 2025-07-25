@@ -205,6 +205,7 @@ def _on_change_layout_params(_=None):
     if _is_new():
         _reset_shift_trailing()
     _refresh_layout()
+    _check_channels()
 
 
 def _on_change_select_layout(_=None):
@@ -544,17 +545,9 @@ def _on_change_select_session(_=None):
         _restore_for_new()
 
 
-###################
-# Local Interplay #
-###################
-
-
-def _on_blur_name():
-    """Autocorrect session name."""
-    if CM["checkbox_04d"].value:
-        name = CM["input_name"].value.strip()
-        if re.fullmatch(r'0*[1-9]\d{0,3}', name):
-            CM.update("input_name", f"session_{int(name):04d}")
+##############
+# Input Name #
+##############
 
 
 NAME_VALIDATE_LEGACY = {
@@ -580,12 +573,17 @@ def _on_change_name_format(e):
     _check_save()
 
 
-def _on_change_st(e):
-    """Source trailing checkbox disabled/enabled."""
-    enabled = e.value
-    for key in ["number_st_x", "number_st_y", "number_st_ch",
-                "input_st_naming", "input_st_naming_result"]:
-        CM.update(key, props="disable", props_remove=enabled)
+def _on_blur_name():
+    """Autocorrect session name."""
+    if CM["checkbox_04d"].value:
+        name = CM["input_name"].value.strip()
+        if re.fullmatch(r'0*[1-9]\d{0,3}', name):
+            CM.update("input_name", f"session_{int(name):04d}")
+
+
+###################
+# Source Trailing #
+###################
 
 
 def _on_change_naming_formatter_st(_=None):
@@ -594,6 +592,61 @@ def _on_change_naming_formatter_st(_=None):
         CM.update("input_st_naming", "ST.LOM{CH:02d}.Z")
     CM.update("input_st_naming_result",
               CM["input_st_naming"].value.format(CH=int(CM["number_st_ch"].value)))
+
+
+def _on_change_st(e):
+    """Source trailing checkbox disabled/enabled."""
+    enabled = e.value
+    for key in ["number_st_x", "number_st_y", "number_st_ch",
+                "input_st_naming", "input_st_naming_result"]:
+        CM.update(key, props="disable", props_remove=enabled)
+    _check_channels()
+
+
+def _on_change_st_channel(_=None):
+    """Source trailing channel change."""
+    _on_change_naming_formatter_st()
+    _check_channels()
+
+
+def _check_channels():
+    """Check if device provides enough channels."""
+    if CM["checkbox_st"] is None:
+        return  # Initialize stage
+
+    device_name = _logger_value2name(CM["select_device"].value)
+    n_ch_device = CM["detected_devices"][device_name]["n_chs"]
+    chs_device = list(range(1, n_ch_device + 1))
+
+    n_ch_layout = len(compute_layout())
+    chs_layout = list(range(1, n_ch_layout + 1))
+    chs_required = chs_layout.copy()
+
+    chs_st = None
+    if CM["checkbox_st"].value:
+        try:
+            chs_st_val = int(CM["number_st_ch"].value)
+            if chs_st_val > 0:
+                chs_st = chs_st_val
+                chs_required.append(chs_st_val)
+        except:  # noqa
+            pass
+
+    lines = [
+        f"• Channels Available on Device: {chs_device}",
+        f"• Channels Requested by Layout: {chs_layout}",
+        f"• Channels Requested by Trailing: {chs_st if chs_st else 'None'}"
+    ]
+
+    diff = set(chs_required) - set(chs_device)
+    if diff:
+        lines.append(f"• Channels Missing from Device: {sorted(diff)}")
+        CM.update("expansion_check_ch", text="⚠️ Insufficient Channels on Device (but you are allowed to proceed)")
+        CM.update("text_check_ch", value="\n  " + "\n\n  ".join(lines))
+    else:
+        lines.append("• All Channels Ready on Device.")
+        CM.update("expansion_check_ch", text="🟢 Sufficient Channels on Device")
+        CM.update("text_check_ch", value="\n  " + "\n\n  ".join(lines))
 
 
 ##################
@@ -619,6 +672,7 @@ def _check_monitor(_=None):
     device_name = _logger_value2name(CM["select_device"].value)
     n_channels = CM["detected_devices"][device_name]["n_chs"]
     CM.update("button_monitor", props="disable", props_remove=n_channels > 0)
+    _check_channels()
 
 
 def _refresh_device(_=None):
@@ -1057,7 +1111,7 @@ def _initialize_session_ui(e):
                     CM["number_st_x"] = MyUI.number_int("Shift X (cm)", value=0, full=False)
                     CM["number_st_y"] = MyUI.number_int("Shift Y (cm)", value=10, full=False)
                 CM["number_st_ch"] = MyUI.number_int("Channel", min=8, value=8,
-                                                     on_change=_on_change_naming_formatter_st)
+                                                     on_change=_on_change_st_channel)
                 with MyUI.row():
                     CM["input_st_naming"] = ui.input(
                         label="Naming Formatter",
@@ -1111,7 +1165,14 @@ def _initialize_session_ui(e):
                 label="⚠️ Saving disabled due to:",
                 value="\n  • Session Name is required."
             ).props('readonly borderless') \
-                .classes('w-1/4 text-base large-label h-24')
+                .classes('w-1/4 text-base large-label h-16')
+
+            # --- Channel Check ---
+            with MyUI.expansion("⚠️ Insufficient Channels on Device") as CM["expansion_check_ch"]:
+                CM["text_check_ch"] = ui.textarea(
+                    label="Channel Info"
+                ).props('readonly borderless rows=10') \
+                    .classes('w-full text-base large-label')
 
     # Load previous with fallback: last selection -> latest creation -> default
     _restore_for_new()
