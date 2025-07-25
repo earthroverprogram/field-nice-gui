@@ -285,7 +285,7 @@ def _refresh_summary():
 
         # Expansion
         CM["expansion_summary"].text = \
-            f"Summary Details: 【 {len(CM['session_dict']['channel_to_idx'])} Channels 】"
+            f"Summary Details: 【 {len(CM['session_dict']['naming'])} Channels 】"
         # Table
         new_rows = []
         for idx, ((x, y), gain) in enumerate(
@@ -423,7 +423,12 @@ def _check_save(_=None):
         CM.update("text_final", text=loc_string)
         return
 
-    is_valid = CM["is_gain_valid"]
+    n_device_channels = CM["session_dict"]["device"]["n_channels"]
+    device_channels = set(range(1, n_device_channels + 1))
+    request_channels = set(CM["session_dict"]["naming"].keys())
+    diff = set(request_channels) - set(device_channels)
+    is_channel_enough = len(diff) == 0 or not CM["checkbox_check_ch"].value
+    is_valid = CM["is_gain_valid"] and is_channel_enough
 
     # --- Save button enable/disable ---
     CM.update("button_record", props="disable", props_remove=is_valid)
@@ -431,7 +436,12 @@ def _check_save(_=None):
     # --- Warning text visibility & content ---
     if not is_valid:
         CM.update("label_final", text="⚠️ Recording Disabled")
-        CM.update("text_final", text="Invalid Gain")
+        reasons = []
+        if not CM["is_gain_valid"]:
+            reasons.append("Invalid Gain")
+        if not is_channel_enough:
+            reasons.append("Insufficient Channels")
+        CM.update("text_final", text="; ".join(reasons))
     else:
         CM.update("label_final", text="🟢 Ready to Record")
         loc_string = (f'#{int(CM["number_experiment"].value):04d} '
@@ -940,7 +950,8 @@ def _initialize_experiment_ui(_=None):
                         )
 
                     # Check channels
-                    CM["checkbox_check_ch"] = MyUI.checkbox("Ensure Enough Channels", value=True, full=True)
+                    CM["checkbox_check_ch"] = MyUI.checkbox("Ensure Enough Channels",
+                                                            value=True, full=True, on_change=_check_save)
 
                     # Go next after record
                     CM["checkbox_next"] = MyUI.checkbox("Go Next after Recording", value=True, full=True)
