@@ -619,7 +619,10 @@ def _check_channels():
     device_name, n_ch_device = _get_selected_device_nch()
     chs_device = list(range(1, n_ch_device + 1))
 
-    n_ch_layout = len(_compute_layout())
+    layout = _compute_layout()
+    if layout is None:  # Code invalid
+        return
+    n_ch_layout = len(layout)
     chs_layout = list(range(1, n_ch_layout + 1))
     chs_required = chs_layout.copy()
 
