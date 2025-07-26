@@ -3,7 +3,6 @@ import time
 
 import numpy as np
 import sounddevice as sd
-from nicegui import ui
 
 STATIC_DEVICE_MAP = {
     "Built-in Mic": lambda phys_name: any(
@@ -36,6 +35,8 @@ class Datalogger:
         self.mode = None
         self.on_data = None
         self.datatype = None
+        self.original_channels = None
+        self.invalid_channels = []
 
     def __enter__(self):
         return self
@@ -95,9 +96,7 @@ class Datalogger:
                 }
         return result
 
-    def _start_streaming_dummy(self, channel_list,
-                               datatype, samplerate, mode, on_data=None):
-        self.active_channels = [ch - 1 for ch in channel_list]
+    def _start_streaming_dummy(self, datatype, samplerate, mode, on_data=None):
         self.mode = mode
         self.on_data = on_data
         self.stop_flag = False
@@ -129,13 +128,15 @@ class Datalogger:
         self.thread.start()
 
     def _start_streaming(self, logical_name, channel_list,
-                         datatype, samplerate, mode, on_data=None):
+                         datatype, samplerate, mode, ignore_invalid_channels=True, on_data=None):
         self.datatype = datatype
         self.mode = mode
         self.on_data = on_data
         self.stop_flag = False
         self.buffer = [] if mode == 'record' else None
         self.active_channels = [ch - 1 for ch in channel_list]
+        self.original_channels = self.active_channels.copy()
+        self.invalid_channels = []
 
         info = self.get_logical_devices().get(logical_name)
         if not info or not info["physical_name"] or info["n_chs"] == 0:
@@ -143,13 +144,18 @@ class Datalogger:
 
         physical_name = info["physical_name"]
         max_channels = info["n_chs"]
-        invalid = [ch + 1 for ch in self.active_channels if ch >= max_channels]
-        if invalid:
-            ui.notify(f"Insufficient physical channels to record channels: {invalid}", color='warning')
-            raise ValueError(f"Device '{physical_name}' does not support channels: {invalid}")
+        self.invalid_channels = [ch for ch in self.active_channels if ch >= max_channels]
+
+        if self.invalid_channels:
+            if ignore_invalid_channels:
+                self.active_channels = [ch for ch in self.active_channels if ch < max_channels]
+            else:
+                raise ValueError(
+                    f"Device '{physical_name}' does not support channels: "
+                    f"{[ch + 1 for ch in self.invalid_channels]}")
 
         if physical_name == "Dummy":
-            self._start_streaming_dummy(channel_list, datatype, samplerate, mode, on_data)
+            self._start_streaming_dummy(datatype, samplerate, mode, on_data)
             return
 
         def callback(indata, frames, time_info, status):  # noqa
@@ -163,7 +169,7 @@ class Datalogger:
 
         self.stream = sd.InputStream(
             samplerate=samplerate,
-            channels=max(self.active_channels) + 1,
+            channels=max(self.active_channels) + 1 if self.active_channels else 1,
             device=physical_name,
             callback=callback,
             dtype=datatype
@@ -179,9 +185,20 @@ class Datalogger:
             self.thread = None
 
         if self.mode == 'record' and self.buffer:
-            return np.concatenate(self.buffer, axis=0)
+            recorded = np.concatenate(self.buffer, axis=0)
+            n_samples = recorded.shape[0]
+            full_data = np.zeros((n_samples, len(self.original_channels)), dtype=self.datatype)
+            ch_map = {ch: i for i, ch in enumerate(self.original_channels)}
+            valid_map = {ch: i for i, ch in enumerate(self.active_channels)}
+            for ch in self.original_channels:
+                if ch in valid_map:
+                    full_data[:, ch_map[ch]] = recorded[:, valid_map[ch]]
+                else:
+                    # invalid channel remains zero
+                    pass
+            return full_data
         else:
-            return np.empty((0, len(self.active_channels)), dtype=self.datatype)
+            return np.empty((0, len(getattr(self, 'original_channels', []))), dtype=self.datatype)
 
     def start_recording(self, logical_name, channel_list, datatype="float32", samplerate=44100):
         """
