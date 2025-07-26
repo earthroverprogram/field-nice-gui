@@ -325,6 +325,7 @@ def _refresh_summary():
 def _on_change_source_location(_=None):
     """Handle source location change."""
     _refresh_summary()
+    _check_save()
 
 
 def _on_change_gain_select(e):
