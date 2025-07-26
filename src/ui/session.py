@@ -866,6 +866,8 @@ def _get_channel_naming():
     ch_naming = {}
     for row in CM["table_layout"].rows:
         ch_naming[row["channel"]] = row["naming"]
+    if CM["checkbox_st"].value:
+        ch_naming[CM["number_st_ch"].value] = CM["input_st_naming_result"].value
     return ch_naming
 
 
