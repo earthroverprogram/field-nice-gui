@@ -21,10 +21,17 @@
       "overwrite": {}
     }
   },
+  "source_trailing": {
+    "enabled": true,
+    "shift_x": 0,
+    "shift_y": 10,
+    "channel": 8,
+    "naming": "ST.LOM{CH:02d}.Z"
+  },
   "datalogger": {
     "device": "Dummy",
     "datatype": "Float32",
-    "sr": 10000,
+    "samplerate": 10000,
     "duration": 5
   },
   "source": {
@@ -32,13 +39,6 @@
     "direction": "-Z",
     "coupling": "Plate",
     "repeats": 5
-  },
-  "source_trailing": {
-    "enabled": true,
-    "shift_x": 0,
-    "shift_y": 10,
-    "channel": 8,
-    "naming": "ST.LOM{CH:02d}.Z"
   },
   "conditions": {
     "weather": "Unknown",
