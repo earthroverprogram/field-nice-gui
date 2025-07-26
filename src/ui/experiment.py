@@ -670,89 +670,189 @@ def _on_change_experiment_number(_=None):
     )
 
 
-async def _record():
-    """Main recording flow: optional countdown, then trigger actual recording."""
+##########
+# Record #
+##########
 
-    # Step 1: Save experiment before recording
+
+def _save_data(data: np.ndarray):
+    """
+    Save multichannel recording data to experiment folder.
+    - Format: MiniSEED
+    - One trace per channel
+    - Also generates waveform preview as PNG
+    """
+
+    # Step 1: Save experiment meta first
     if not _save_experiment():
-        ui.notify("Failed to save experiment meta. Recording skipped.", color='negative')
+        ui.notify("Failed to save experiment meta. Data saving also skipped.", color='negative')
         return
 
-    # Step 2: Optional countdown sequence
+    # Step 2: Get target folder
+    number, folder = _get_experiment_folder()
+
+    # Step 3: Create obspy Stream and fill with traces
+    stream = Stream()
+    naming_dict = CM["session_dict"]["naming"]
+    samplerate = CM["session_dict"]["datalogger"]["samplerate"]
+
+    now = UTCDateTime.now()
+    for ch_index, (logical_ch, naming) in enumerate(naming_dict.items()):
+        if ch_index >= data.shape[1]:
+            ui.notify(f"Channel mismatch: not enough data columns for {logical_ch}", color='negative')
+            continue
+        network, station, channel = naming.split(".")
+        trace = Trace(data[:, ch_index].copy(), header={
+            "sampling_rate": samplerate,
+            "starttime": now,
+            "network": network,
+            "station": station,
+            "channel": channel,
+        })
+        stream.append(trace)
+
+    # Step 4: Save to MiniSEED
+    try:
+        stream.write(folder / "data.mseed", format="MSEED")
+        ui.notify(f"Data saved to MiniSEED {folder / 'data.mseed'}.", color='positive')
+    except Exception as e:
+        ui.notify(f"Failed to write MiniSEED: {e}", color='negative')
+        return
+
+    # Step 5: Save preview plot
+    try:
+        plt.style.use('default')  # Preview figure is always white
+        fig = plt.figure(dpi=200, figsize=(8, 6))
+        ax = fig.gca()
+
+        y_offset = 0
+        offset_step = 1
+        if len(stream) > 0:
+            time_axis = list(np.arange(stream[0].data.shape[0]) / stream[0].stats.sampling_rate)
+        else:
+            ui.notify("Impossible Error. Report for debugging.", color="negative")
+            return
+        for trace in stream:
+            data = trace.data.astype(float)
+            normed = data / (np.max(np.abs(data)) or 1) * 0.5  # 0.5 to avoid overlap
+            ax.plot(time_axis, -normed + y_offset, linewidth=0.5)  # -normed for inverted y-axis
+            label = f'{trace.stats.network}.{trace.stats.station}.{trace.stats.channel} '
+            ax.text(time_axis[0], y_offset, label, ha="right", va='center', fontsize=8)
+            y_offset += offset_step
+
+        ax.set_xlabel("Time (s)")
+        ax.set_yticks([])
+        ax.set_xlim(time_axis[0], time_axis[-1])
+        lics = CM["select_lics"].value
+        session = CM["select_session"].value
+        number = int(CM["number_experiment"].value)
+        ax.set_title(f"{lics}/{session}/{_number_to_dir(number)}")
+        ax.invert_yaxis()  # Make ch=1 on top
+        fig.tight_layout(pad=0)
+        fig.savefig(folder / "preview.png", bbox_inches="tight")
+        fig.clf()
+        plt.close(fig)
+        plt.style.use('dark_background' if GS.dark_mode else 'default')  # Restore plot theme
+    except Exception as e:
+        ui.notify(f"Failed to save preview image: {e}", color='negative')
+
+
+async def _record():
+    async def _reset_ui():
+        CM["is_recording"] = False
+        CM["button_record"].set_icon("radio_button_checked")
+        CM["button_record"].props(remove="disable")
+        await asyncio.sleep(0.2)
+        CM["progress"].set_value(0.0)
+        _on_change_experiment_number()
+
+    def _start_record():
+        CM["is_recording"] = True
+        CM["button_record"].set_icon("stop_circle")
+        CM["button_record"].props(remove="disable")
+        CM["progress"].set_value(0.0)
+        CM["datalogger"].start_recording(
+            logical_name=logical_name,
+            channel_list=channel_list,
+            datatype=datatype,
+            samplerate=samplerate,
+        )
+
+    # If currently recording: STOP
+    if CM["is_recording"]:
+        data = CM["datalogger"].stop_streaming()
+        _save_data(data)
+        await _reset_ui()
+        return
+
+    # Retrieve recording parameters
+    info = CM["session_dict"]["datalogger"]
+    logical_name = info["name"]
+    duration = info["duration"]
+    samplerate = info["samplerate"]
+    datatype = info["datatype"]
+    channel_list = list(CM["session_dict"]["naming"].keys())
+
+    # Optional countdown before recording starts
     if CM["checkbox_countdown"].value:
-        # Disable the record button during countdown
+        # Disable button during countdown
         CM["button_record"].props("disable")
 
-        # Play countdown voice if enabled
+        # Play voice prompt if enabled
         if CM['select_voice'].value != "<Silent>":
             CM["audio_countdown"].set_source(f"assets/countdown/{CM['select_voice'].value}.mp3")
             CM["audio_countdown"].play()
-            await asyncio.sleep(0.1)  # Small delay to ensure audio starts
+            await asyncio.sleep(0.1)  # ensure audio playback starts
 
-        # Show countdown numbers: 3, 2, 1
+        # Display countdown numbers: 3, 2, 1
         CM["display_countdown"].style("display: block;")
         for word in ["3", "2", "1"]:
             CM["display_countdown"].text = word
             await asyncio.sleep(1)
 
-        # Step 3: Show "Go!" and immediately start recording
+        # Display "Go!" and start recording immediately
         CM["display_countdown"].text = "Go!"
-        CM["button_record"].props(remove="disable").set_icon("stop_circle")
-
-        record_task = asyncio.create_task(_actual_record())  # Start recording immediately
-
-        # Keep displaying "Go!" for 1 second
+        try:
+            _start_record()
+        except Exception as e:  # recording failed
+            ui.notify(f"Failed to start recording: {e}", color='negative')
+            await _reset_ui()
+            return
         await asyncio.sleep(1)
         CM["display_countdown"].style("display: none;")
 
-        # Step 4: Wait for recording to finish
-        try:
-            await record_task
-        finally:
-            # Step 5: Restore UI
-            CM["button_record"].set_icon("radio_button_checked")
-            _on_change_experiment_number()
+        # Re-enable button after countdown
+        CM["button_record"].props(remove="disable")
 
     else:
-        # If countdown is not enabled, start recording immediately
-        CM["button_record"].props(remove="disable").set_icon("stop_circle")
+        # No countdown, start recording immediately
         try:
-            await _actual_record()
-        finally:
-            CM["button_record"].set_icon("radio_button_checked")
-            _on_change_experiment_number()
+            _start_record()
+        except Exception as e:  # recording failed
+            ui.notify(f"Failed to start recording: {e}", color='negative')
+            await _reset_ui()
+            return
+
+    # Start progress bar update loop
+    start_time = time.perf_counter()
+    while time.perf_counter() - start_time < duration:
+        elapsed = time.perf_counter() - start_time
+        CM["progress"].set_value(elapsed / duration)
+        await asyncio.sleep(0.05)
+
+    # Ensure final recording block is received before stopping
+    await asyncio.sleep(0.5)
+
+    # If not manually stopped, stop now (duration reached)
+    if CM["is_recording"]:
+        data = CM["datalogger"].stop_streaming()
+        _save_data(data)
+        await _reset_ui()
 
     # Go next
     if CM["checkbox_next"].value:
         await asyncio.sleep(0.1)  # Wait for figure to flush
         _go_next()
-
-
-async def _actual_record():
-    """The actual recording process. Now just a placeholder."""
-    lics = CM["select_lics"].value
-    session = CM["select_session"].value
-    number, folder = _get_experiment_folder()
-    png_path = folder / "placeholder.png"
-    plt.style.use('default')
-    fig = plt.figure(dpi=200)
-    fig.patch.set_facecolor("white")
-    ax = fig.gca()
-    ax.set_facecolor("white")
-    ax.text(0, 0, f"Tracks obtained by\n\n"
-                  f"{lics}\n{session}\n{_number_to_dir(number)}\n\n"
-                  f"Number of channels: {len(CM['table_summary'].rows)}",
-            ha="center", va="center",
-            color="black", fontsize=20)
-    ax.set_xlim(-1, 1)
-    ax.set_ylim(-1, 1)
-    ax.set_xticks([])
-    ax.set_yticks([])
-    fig.tight_layout(pad=0)
-    fig.savefig(png_path, bbox_inches="tight", pad_inches=0.02)
-    fig.clf()
-    plt.close(fig)
-    plt.style.use('dark_background' if GS.dark_mode else 'default')  # Restore plt.style
 
 
 ###################
@@ -951,9 +1051,11 @@ def _initialize_experiment_ui(_=None):
                         CM["audio_countdown"] = ui.audio("", autoplay=False, controls=False)
                         CM["display_countdown"] = ui.label("321").classes(
                             "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 "
-                            "text-primary text-[200px] font-bold z-50 pointer-events-none rounded-xl px-8 py-4 text-center"
+                            "text-primary text-[200px] font-bold z-50 pointer-events-none "
+                            "rounded-xl px-8 py-4 text-center border-8"
                         ).style(
                             f"display: none; background-color: {MyUI.bg_color()}; min-width: 400px;"
+                            f"border: 8px solid {MyUI.primary_color()};"
                         )
 
                     # Check channels
@@ -969,26 +1071,27 @@ def _initialize_experiment_ui(_=None):
                         CM["number_inc_y"] = MyUI.number_int("Src Incr Y (cm)", value=0, full=False)
 
             # --- Record ---
+            CM["is_recording"] = False
+            CM["datalogger"] = Datalogger()
             with ui.column().classes('flex-[6]'):
                 with MyUI.cap_card("Record", full=True, highlight=True, height_px=card_height):
-                    with ui.row().classes('w-full items-center justify-center gap-10 flex-nowrap'):
-                        bg = MyUI.bg_color()
-                        ft = MyUI.font_color()
-
+                    with ui.row().classes('w-full items-center justify-center gap-4 flex-nowrap'):
                         CM["button_prev"] = ui.button(icon='chevron_left', on_click=_go_previous) \
-                            .classes('h-24 text-7xl').props("flat") \
-                            .style(f'background-color: {bg}; color: {ft}; border: none;')
+                            .classes('text-6xl').props("flat round")
 
-                        CM["button_record"] = ui.button(icon='radio_button_checked', on_click=_record) \
-                            .classes('h-24 text-7xl').props("flat") \
-                            .style(f'background-color: {bg}; color: {ft}; border: none;')
+                        with ui.circular_progress(value=0.0, show_value=False,
+                                                  size='6.5rem', color="negative") \
+                                .props('track-color="transparent"') as CM["progress"]:
+                            CM["button_record"] = ui.button(
+                                icon='radio_button_checked',
+                                on_click=_record
+                            ).classes('text-6xl').props('flat round')
 
                         CM["button_next"] = ui.button(icon='chevron_right', on_click=_go_next) \
-                            .classes('h-24 text-7xl').props("flat") \
-                            .style(f'background-color: {bg}; color: {ft}; border: none;')
+                            .classes('text-6xl').props("flat round")
 
                     # --- Info ---
-                    CM["label_final"] = ui.label().classes('font-bold -mt-4 text-xl mr-2 font-mono w-full text-center')
+                    CM["label_final"] = ui.label().classes('font-bold -mt-2 text-xl mr-2 font-mono w-full text-center')
                     CM["text_final"] = ui.label().classes('text-xl mr-2 font-mono w-full text-center')
 
             # --- Figure ---
