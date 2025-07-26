@@ -986,7 +986,7 @@ def _initialize_session_ui(e):
                     value=DEFAULT_LAYOUT_CODE,
                     on_change=_on_change_layout_params,
                     language="Python",
-                    theme="duotoneDark" if GS.dark_mode else "duotoneLight",
+                    theme="gruvboxDark" if GS.dark_mode else "gruvboxLight",
                 ).classes("w-full hidden").style('height: 160px;')
 
             with MyUI.expansion(f"Layout Details: 【 7 Channels 】") as CM["expansion_layout"]:

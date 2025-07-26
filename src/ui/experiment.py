@@ -846,7 +846,7 @@ def _initialize_experiment_ui(_=None):
                             value=comment + GAIN_TEMPLATES[default_gain_select]["front_code"],
                             on_change=_on_change_gain_code,
                             language="Python",
-                            theme="duotoneDark" if GS.dark_mode else "duotoneLight",
+                            theme="gruvboxDark" if GS.dark_mode else "gruvboxLight",
                         ).classes("w-full").style('height: 200px;')
                     with ui.matplotlib(dpi=200, figsize=(4, 4)) \
                             .classes("flex-[6]").figure as CM["figure_gain"]:  # noqa
