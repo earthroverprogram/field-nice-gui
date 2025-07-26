@@ -621,6 +621,8 @@ def _check_channels():
 
     layout = _compute_layout()
     if layout is None:  # Code invalid
+        CM.update("expansion_check_ch", text="⚠️ Invalid Layout")
+        CM.update("text_check_ch", value="")
         return
     n_ch_layout = len(layout)
     chs_layout = list(range(1, n_ch_layout + 1))
