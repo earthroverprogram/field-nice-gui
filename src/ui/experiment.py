@@ -172,7 +172,8 @@ def _compute_summary():
 
     # --- Overwrite gains if manually set ---
     if CM["overwrite_gain"]:
-        ch2idx = CM["session_dict"]["channel2idx"]
+        channels = list(CM["session_dict"]["naming"].keys())
+        ch2idx = {ch: idx for idx, ch in enumerate(channels)}
         for ch, gain in CM["overwrite_gain"].items():
             if ch in ch2idx and ch2idx[ch] < len(gains):
                 gains[ch2idx[ch]] = gain
