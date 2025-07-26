@@ -673,7 +673,7 @@ async def _record():
 
     # Step 1: Save experiment before recording
     if not _save_experiment():
-        ui.notify("Failed to save experiment. Recording skipped.", color='negative')
+        ui.notify("Failed to save experiment meta. Recording skipped.", color='negative')
         return
 
     # Step 2: Optional countdown sequence
