@@ -105,23 +105,24 @@ class Datalogger:
         dtype = np.dtype(datatype)
         blocksize = 512
         interval = blocksize / samplerate
-        t = 0
+        rng = np.random.default_rng()
 
         def dummy_loop():
-            nonlocal t
             while not self.stop_flag:
-                time_array = (t + np.arange(blocksize)) / samplerate
-                t += blocksize
-                base = np.sin(2 * np.pi * 440 * time_array)
-                full_block = np.zeros((blocksize, DUMMY_CHANNELS), dtype=dtype)
+                # Generate band-limited random signal
+                base = rng.normal(0, 0.2, size=(blocksize, DUMMY_CHANNELS)).astype(dtype)
+                base = np.cumsum(base, axis=0)  # Optional: integrate to get smoother appearance
+
+                # Optional: slight channel offset
                 for ch in self.active_channels:
-                    if ch < DUMMY_CHANNELS:
-                        full_block[:, ch] = base
-                selected = full_block[:, self.active_channels]
+                    base[:, ch] += 0.02 * np.sin(2 * np.pi * (ch + 1) * np.arange(blocksize) / samplerate)
+
+                selected = base[:, self.active_channels]
                 if self.mode == 'record':
                     self.buffer.append(selected)
                 elif self.mode == 'monitor' and self.on_data:
                     self.on_data(selected)
+
                 time.sleep(interval)
 
         self.thread = threading.Thread(target=dummy_loop)
