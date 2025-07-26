@@ -178,7 +178,7 @@ class MyUI:
     @staticmethod
     def primary_color():
         """Return primary color."""
-        return '#DCB02B' if GS.dark_mode else '#2e7d32'
+        return '#FFA500' if GS.dark_mode else '#2e7d32'
 
     @staticmethod
     def gray_color():
