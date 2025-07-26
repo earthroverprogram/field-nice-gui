@@ -1,21 +1,23 @@
 import asyncio
 import json
+import os
 import re
+import time
 from datetime import datetime
 from types import SimpleNamespace
 
 import matplotlib
 
 matplotlib.use('Agg')
-
 import matplotlib.pyplot as plt
-import os
 import numpy as np
 import yaml
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
 from nicegui import ui
+from obspy import Stream, Trace, UTCDateTime
 
+from src.device.datalogger import Datalogger
 from src.ui import GS, DATA_DIR
 from src.ui.session import get_session_dict
 from src.ui.utils import ControlManager, MyPlot, MyUI, CallbackBlocker, ThreeImageViewer
@@ -425,7 +427,7 @@ def _check_save(_=None):
         CM.update("text_final", text=loc_string)
         return
 
-    n_device_channels = CM["session_dict"]["device"]["n_channels"]
+    n_device_channels = CM["session_dict"]["datalogger"]["n_channels"]
     device_channels = set(range(1, n_device_channels + 1))
     request_channels = set(CM["session_dict"]["naming"].keys())
     diff = set(request_channels) - set(device_channels)
@@ -509,7 +511,7 @@ def _save_experiment():
     try:
         with open(json_path, "w", encoding="utf-8") as fs:
             json.dump(data, fs, indent=2)  # noqa
-        ui.notify(f'Experiment saved to "{json_path}".', color='positive')
+        ui.notify(f'Experiment meta saved to "{json_path}".', color='positive')
         return True
     except Exception as e:  # noqa
         ui.notify(f'Failed to save {json_path}: {e}', color='negative')
@@ -657,13 +659,13 @@ def _on_change_experiment_number(_=None):
     _check_save()
 
     # 4. Preview
-    fallbacks = ["src/ui/defaults/placeholder.png"] * 3
+    fallbacks = ["src/ui/defaults/preview.png"] * 3
     if number == 1:
         fallbacks[0] = ""  # Number 0 is not allowed
     CM["previewer"].set_images(
-        folder.parent / f"experiment_{number - 1:04d}/placeholder.png",
-        folder.parent / f"experiment_{number:04d}/placeholder.png",
-        folder.parent / f"experiment_{number + 1:04d}/placeholder.png",
+        folder.parent / f"experiment_{number - 1:04d}/preview.png",
+        folder.parent / f"experiment_{number:04d}/preview.png",
+        folder.parent / f"experiment_{number + 1:04d}/preview.png",
         fallbacks=fallbacks
     )
 
