@@ -168,7 +168,7 @@ class MyUI:
         """Return background color."""
         if error:
             return "#8b0000" if GS.dark_mode else "#fee"
-        return "#1E1E1E" if GS.dark_mode else "#FFFFFF"
+        return "#002147" if GS.dark_mode else "#FFFFFF"
 
     @staticmethod
     def font_color():
@@ -178,7 +178,7 @@ class MyUI:
     @staticmethod
     def primary_color():
         """Return primary color."""
-        return '#FCAE1E' if GS.dark_mode else '#2e7d32'
+        return '#DCB02B' if GS.dark_mode else '#2e7d32'
 
     @staticmethod
     def gray_color():
