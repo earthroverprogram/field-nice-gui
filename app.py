@@ -21,7 +21,7 @@ GS.dark_mode = 'dark' in " ".join(sys.argv).lower()
 # Theme colors and CSS
 # ------------------------
 primary = MyUI.primary_color()
-ui.colors(primary=primary)
+ui.colors(primary=primary, dark=MyUI.bg_color(), dark_page=MyUI.bg_color())
 plt.style.use('dark_background' if GS.dark_mode else 'default')
 
 ui.add_head_html(f'''
