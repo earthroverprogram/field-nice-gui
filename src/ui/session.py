@@ -876,7 +876,13 @@ def get_session_dict():
         "layout": _compute_layout(),
         "st_dict": _get_trailing(),
         "naming": _get_channel_naming(),
-        "device": {"name": device_name, "n_channels": n_channels}
+        "datalogger": {
+            "name": device_name,
+            "n_channels": n_channels,
+            "datatype": CM["select_datatype"].value,
+            "samplerate": CM["number_sr"].value,
+            "duration": CM["number_duration"].value
+        }
     }
 
 
