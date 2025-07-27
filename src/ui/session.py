@@ -540,6 +540,9 @@ def _on_change_select_session(_=None):
             # Update options and selection
             session_options = ["<NEW>"] + get_existing_sorted(DATA_DIR / lics)
             CM.update("select_session", "<NEW>", options=session_options)
+        # Input name
+        if not CM["input_name"].validate():
+            CM["checkbox_04d"].value = False
     else:
         # Load previous with fallback: last selection -> latest creation -> default
         _restore_for_new()
