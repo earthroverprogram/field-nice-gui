@@ -1,5 +1,5 @@
+import argparse
 import base64
-import sys
 
 import matplotlib.pyplot as plt
 from nicegui import ui
@@ -13,9 +13,17 @@ from src.ui.utils import MyUI
 from src.ui.view import initialize as view_initialize
 
 # ------------------------
-# Static dark mode setup
+# Parse command-line args
 # ------------------------
-GS.dark_mode = 'dark' in " ".join(sys.argv).lower()
+parser = argparse.ArgumentParser(description="Run NiceGUI app with custom theme and port.")
+parser.add_argument('--theme', choices=['light', 'dark'], default='light', help='UI theme mode')
+parser.add_argument('--port', type=int, default=8080, help='Port to run the app on')
+args = parser.parse_args()
+
+# ------------------------
+# Dark mode setup
+# ------------------------
+GS.dark_mode = (args.theme == 'dark')
 
 # ------------------------
 # Theme colors and CSS
@@ -101,6 +109,7 @@ with open('assets/erp.jpeg', 'rb') as f:
 # ------------------------
 ui.run(
     title="Field UI",
+    port=args.port,
     favicon=f'data:image/jpeg;base64,{favicon_base64}',
     dark=GS.dark_mode
 )
