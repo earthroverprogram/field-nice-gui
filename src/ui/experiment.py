@@ -558,7 +558,10 @@ def _load_experiment(json_path, experiment_number, post_notes=True):
         # Gain
         CM.update("select_gain", data["gain"]["template"])
         CM.update("code_gain_param", data["gain"]["code_param"])
-        CM["overwrite_gain"] = data["gain"]["overwrite"]
+        CM["overwrite_gain"] = {
+            int(ch): value
+            for ch, value in data["gain"]["overwrite"].items()
+        }
 
         # Notes and time
         CM.update("input_pre_notes", data["pre_notes"])
