@@ -1,8 +1,11 @@
+import socket
 import threading
 import time
 
 import numpy as np
 import sounddevice as sd
+
+from src.osc_lib.osc_client import SimpleTCPClient
 
 STATIC_DEVICE_MAP = {
     "Built-in Mic": lambda phys_name: any(
@@ -235,8 +238,35 @@ class Datalogger:
             while not self.stop_flag:
                 sd.sleep(100)
 
-    def set_preamp_gain(self, device, channel_gain_dict):
+    @staticmethod
+    def set_preamp_gain(device, channel_gain_dict):
         """
-        Set preamp gain at the physical level.
+        Set preamp gain at the physical level, with a total timeout of 2 seconds.
         """
-        pass
+        if device != "EVO-16":
+            raise ValueError("Only EVO-16 currently supports preamp gain.")
+
+        ip = "127.0.0.1"
+        port = 9992
+        timeout_limit = 2.0  # total timeout in seconds
+        start_time = time.time()
+
+        try:
+            with SimpleTCPClient(ip, port) as tcp_client:
+                for ch, gain in channel_gain_dict.items():
+                    if gain is None:
+                        continue
+
+                    elapsed = time.time() - start_time
+                    if elapsed >= timeout_limit:
+                        raise TimeoutError("Setting preamp gain exceeded time limit")
+
+                    addr = f"/input/analogue{ch:02d}"
+                    tcp_client.sendOSCMessage(addr, ["set", "gain", gain])
+                    tcp_client.receive()
+
+        except socket.timeout:
+            raise TimeoutError("Socket timed out while setting preamp gain")
+
+        except Exception as e:
+            raise RuntimeError(f"Failed to set preamp gain: {e}")

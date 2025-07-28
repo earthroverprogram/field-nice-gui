@@ -823,6 +823,18 @@ async def _record():
     datatype = info["datatype"]
     channel_list = list(CM["session_dict"]["naming"].keys())
 
+    # set preamp on EVO-16
+    if logical_name == "EVO-16":
+        ch_gain = {}
+        for row in CM["table_summary"].rows:
+            ch_gain[row["channel"]] = row["gain"]
+        try:
+            Datalogger.set_preamp_gain(device=logical_name, channel_gain_dict=ch_gain)
+        except Exception as ex:
+            ui.notify(f"Failed to set preamp gain on EVO-16: {ex}", color='negative')
+            await _reset_ui()
+            return
+
     # Optional countdown before recording starts
     if CM["checkbox_countdown"].value:
         # Disable button during countdown
