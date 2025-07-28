@@ -619,6 +619,15 @@ def _on_change_st_channel(_=None):
 # Logger Validation & Monitoring #
 ##################################
 
+def _on_change_select_datatype(e):
+    value = e.value
+    if value in ("int8", "int16"):
+        ui.notify(
+            f"Datatype '{value}' is intended for special hardware and may cause clipping. "
+            "Use int24 or float32 unless you have a specific need.",
+            color='warning'
+        )
+
 
 def _check_channels():
     """Check if device provides enough channels."""
@@ -1153,7 +1162,8 @@ def _initialize_session_ui(e):
 
                 CM["select_datatype"] = ui.select(
                     SESSION_OPTIONS["datatype"], value="float32",
-                    label="Datatype (float32 Recommended)").classes('w-full')
+                    label="Datatype (float32 is recommended)",
+                    on_change=_on_change_select_datatype).classes('w-full')
                 CM["number_sr"] = MyUI.number_int("Sampling Rate", min=1, value=10000)
                 CM["number_duration"] = MyUI.number_int("Duration (s)", min=1, value=5)
 

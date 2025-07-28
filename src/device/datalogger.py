@@ -135,6 +135,9 @@ class Datalogger:
 
     def _start_streaming(self, logical_name, channel_list,
                          datatype, samplerate, mode, ignore_invalid_channels=True, on_data=None):
+        if datatype == "int24":
+            datatype = "int32"  # numpy does not support int24
+
         self.datatype = datatype
         self.mode = mode
         self.on_data = on_data
