@@ -10,8 +10,8 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Or
+Full command:
 
 ```bash
-python app.py dark
+app.py [-h] [--theme {light,dark}] [--port PORT]
 ```
