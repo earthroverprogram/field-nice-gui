@@ -120,7 +120,7 @@ class Datalogger:
 
                 for ch in self.active_channels:
                     wave = np.sin(2 * np.pi * (ch + 1) * np.arange(blocksize) / samplerate)
-                    base[:, ch] = scale * (base[:, ch] + wave.astype(dtype))
+                    base[:, ch] = (scale * (base[:, ch] + wave)).astype(dtype)
 
                 selected = base[:, self.active_channels]
                 if self.mode == 'record':
