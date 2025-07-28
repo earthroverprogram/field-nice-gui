@@ -1135,7 +1135,7 @@ def _initialize_experiment_ui(_=None):
 
         # Snuffler
         CM["button_snuffler"] = ui.button("View in Snuffler", on_click=_view_in_snuffler) \
-            .classes("self-center").props("disable")
+            .classes('self-center w-1/4 text-white font-semibold h-14').props("disable")
 
     # Safe call
     _on_change_experiment_number()

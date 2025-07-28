@@ -279,7 +279,7 @@ class CallbackBlocker:
 
 
 class ThreeImageViewer:
-    def __init__(self, height='300px', ratio=(2, 3, 2), gap=10):
+    def __init__(self, height='400px', ratio=(2, 3, 2), gap=10):
         with ui.row().classes('items-center w-full') \
                 .style(f'height: {height}; gap: {gap}px; perspective: 1000px;'):
             self.left_img = ui.image('').style('''
