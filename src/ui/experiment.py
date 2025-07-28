@@ -752,7 +752,7 @@ def _save_data(data: np.ndarray):
     # Step 5: Save preview plot
     try:
         plt.style.use('default')  # Preview figure is always white
-        fig = plt.figure(dpi=200, figsize=(8, 6))
+        fig = plt.figure(dpi=200, figsize=(6.4, 4.8))
         ax = fig.gca()
 
         y_offset = 0
