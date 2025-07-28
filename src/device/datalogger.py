@@ -116,7 +116,7 @@ class Datalogger:
                 # Optional: slight channel offset
                 scale = 0.5  # keep sine wave within ±0.5 for float types
                 if np.issubdtype(dtype, np.integer):
-                    scale = 0.5 * np.iinfo(dtype).max
+                    scale = 0.1 * np.iinfo(dtype).max
 
                 for ch in self.active_channels:
                     wave = np.sin(2 * np.pi * (ch + 1) * np.arange(blocksize) / samplerate)
