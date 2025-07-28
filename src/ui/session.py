@@ -778,7 +778,7 @@ def _monitor_device(_=None):
 
             # Right 1/3 block
             with ui.column().classes("flex-1"):
-                checkbox_norm_each = MyUI.checkbox("Normalising Each", value=False, full=False)
+                checkbox_norm_each = MyUI.checkbox("Per-Channel Norm", value=False, full=False)
                 checkbox_freq = MyUI.checkbox("Frequency Domain", value=False, full=False)
                 number_min_freq.bind_enabled_from(checkbox_freq, "value")
                 number_max_freq.bind_enabled_from(checkbox_freq, "value")
