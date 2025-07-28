@@ -110,12 +110,17 @@ class Datalogger:
         def dummy_loop():
             while not self.stop_flag:
                 # Generate band-limited random signal
-                base = rng.normal(0, 0.2, size=(blocksize, DUMMY_CHANNELS)).astype(dtype)
+                base = rng.normal(0, 0.2, size=(blocksize, DUMMY_CHANNELS))
                 base = np.cumsum(base, axis=0)  # Optional: integrate to get smoother appearance
 
                 # Optional: slight channel offset
+                scale = 0.5  # keep sine wave within ±0.5 for float types
+                if np.issubdtype(dtype, np.integer):
+                    scale = 0.5 * np.iinfo(dtype).max
+
                 for ch in self.active_channels:
-                    base[:, ch] += 0.02 * np.sin(2 * np.pi * (ch + 1) * np.arange(blocksize) / samplerate)
+                    wave = np.sin(2 * np.pi * (ch + 1) * np.arange(blocksize) / samplerate)
+                    base[:, ch] = scale * (base[:, ch] + wave.astype(dtype))
 
                 selected = base[:, self.active_channels]
                 if self.mode == 'record':
