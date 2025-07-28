@@ -1,6 +1,7 @@
 import json
 import re
 import time
+import warnings
 from datetime import datetime
 from types import SimpleNamespace
 
@@ -70,7 +71,9 @@ def _compute_layout(plus_shift=True):
         try:
             user_code = CM["code_custom"].value
             local_env = {}
-            exec(user_code, {}, local_env)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", SyntaxWarning)
+                exec(user_code, {}, local_env)
             layout = local_env["custom_layout"]()
             if (not isinstance(layout, np.ndarray) or
                     layout.ndim != 2 or layout.shape[1] != 2 or layout.shape[0] == 0):
@@ -748,6 +751,7 @@ def _monitor_device(_=None):
                 value=1024,
                 label="Window Size"
             ).classes("flex-1")
+            checkbox_norm_each = MyUI.checkbox("Normalising Each", value=True, full=False)
 
         # Frequency domain controls
         with MyUI.row():
@@ -790,6 +794,8 @@ def _monitor_device(_=None):
             ax = fig.gca()
             ax.clear()
 
+            normalize_each = checkbox_norm_each.value
+
             if checkbox_freq.value:
                 # --- Frequency domain ---
                 freqs = np.fft.rfftfreq(window, d=1 / samplerate)
@@ -811,14 +817,22 @@ def _monitor_device(_=None):
                 if fft_vals.shape[0] == 0 or np.all(fft_vals == 0):
                     return  # Avoid invalid normalization or empty plot
 
-                normed = fft_vals / (np.max(np.abs(fft_vals), axis=0, keepdims=True) + 1e-8) / 2
+                if normalize_each:
+                    normed = fft_vals / (np.max(np.abs(fft_vals), axis=0, keepdims=True) + 1e-8) / 2
+                else:
+                    normed = fft_vals / (np.max(np.abs(fft_vals)) + 1e-8) / 2
+
                 for ch in range(n_channels):
                     ax.plot(freqs, -normed[:, ch] + ch, lw=1)
                 ax.set_xlabel("Frequency (Hz)")
 
             else:
                 # --- Time domain ---
-                normed = signal_buffer / (np.max(np.abs(signal_buffer), axis=0, keepdims=True) + 1e-8) / 2
+                if normalize_each:
+                    normed = signal_buffer / (np.max(np.abs(signal_buffer), axis=0, keepdims=True) + 1e-8) / 2
+                else:
+                    normed = signal_buffer / (np.max(np.abs(signal_buffer)) + 1e-8) / 2
+
                 time_axis = np.arange(window) / samplerate
                 for ch in range(n_channels):
                     ax.plot(time_axis, -normed[:, ch] + ch, lw=1)

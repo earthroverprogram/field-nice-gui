@@ -3,6 +3,7 @@ import json
 import os
 import re
 import time
+import warnings
 from datetime import datetime
 from types import SimpleNamespace
 
@@ -53,7 +54,9 @@ def _compute_gain(distances):
         local_env = {}
 
         # --- Execute user-defined parameter definition (e.g. param = ...) ---
-        exec(front_code, {}, local_env)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", SyntaxWarning)
+            exec(front_code, {}, local_env)
         if "param" not in local_env:
             raise ValueError("You must define a variable named 'param'.")
         param = local_env["param"]
