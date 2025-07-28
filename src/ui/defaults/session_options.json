@@ -7,11 +7,13 @@
   ],
   "excitation": [
     "Hammer",
-    "Airgun"
+    "Airgun",
+    "Stomper"
   ],
   "coupling": [
     "Plate",
     "Spike",
+    "Stomper",
     "None"
   ],
   "direction": [
@@ -24,16 +26,28 @@
   ],
   "weather": [
     "Sunny",
+    "Partly Cloudy",
     "Cloudy",
+    "Overcast",
+    "Drizzle",
     "Rainy",
-    "Snow"
+    "Thunderstorm",
+    "Snow",
+    "Sleet",
+    "Hail",
+    "Windy",
+    "Foggy",
+    "Mist",
+    "Hazy"
   ],
   "temperature": [
     "Freezing",
     "Cold",
+    "Cool",
     "Mild",
     "Warm",
-    "Hot"
+    "Hot",
+    "Scorching"
   ],
   "moisture": [
     "Dry",
@@ -42,25 +56,61 @@
   ],
   "texture": [
     "Sand",
+    "Loamy Sand",
+    "Sandy Loam",
+    "Loam",
+    "Silt Loam",
     "Silt",
+    "Sandy Clay Loam",
+    "Clay Loam",
+    "Silty Clay Loam",
+    "Sandy Clay",
+    "Silty Clay",
     "Clay"
   ],
   "order": [
     "Alfisol",
+    "Andosol",
+    "Aridisol",
+    "Entisol",
+    "Gelisol",
+    "Histosol",
+    "Inceptisol",
+    "Mollisol",
+    "Oxisol",
+    "Spodosol",
     "Ultisol",
-    "Entisol"
+    "Vertisol"
   ],
   "agriculture": [
     "Conventional",
-    "Organic"
+    "Organic",
+    "Agroforestry",
+    "Pasture",
+    "Woodland",
+    "Conservation Agriculture",
+    "Regenerative Agriculture",
+    "Rewilding",
+    "Experimental"
   ],
   "crop": [
-    "Corn",
-    "Wheat",
-    "Rice"
+    "Cereal",
+    "Legume",
+    "Root Crop",
+    "Fruit Crop",
+    "Forage",
+    "Cover Crop",
+    "Alley Crop"
   ],
   "cultivation": [
+    "None",
     "Tillage",
-    "No-till"
+    "Reduced Tillage",
+    "Zero Tillage",
+    "Manual",
+    "Mulching",
+    "Cover Cropping",
+    "Contour Plowing",
+    "Terracing"
   ]
 }
