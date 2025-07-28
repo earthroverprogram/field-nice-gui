@@ -744,26 +744,37 @@ def _monitor_device(_=None):
                 "w-12 h-12")
 
         # Basic settings row
-        with MyUI.row():
-            refresh_interval = ui.number("Refresh Interval (s)", value=0.5, min=0.1, step=0.1).classes("flex-1")
-            window_selector = ui.select(
-                options=[256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536],
-                value=1024,
-                label="Window Size"
-            ).classes("flex-1")
-            checkbox_norm_each = MyUI.checkbox("Normalising Each", value=True, full=False)
+        with ui.column():
+            with MyUI.row():
+                # Left 2/3 block
+                with ui.column().classes("flex-[2]"):
+                    with MyUI.row():
+                        refresh_interval = ui.number(
+                            "Refresh Interval (s)", value=0.5, min=0.1, step=0.1
+                        ).classes("flex-1")
+                        window_selector = ui.select(
+                            options=[256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536],
+                            value=1024,
+                            label="Window Size"
+                        ).classes("flex-1")
 
-        # Frequency domain controls
-        with MyUI.row():
-            number_min_freq = ui.number("Min Freq (Hz)", value=100,
-                                        min=0, max=samplerate // 2,
-                                        step=100).classes("flex-1")
-            number_max_freq = ui.number("Max Freq (Hz)", value=samplerate // 2,
-                                        min=0, max=samplerate // 2,
-                                        step=100).classes("flex-1")
-            checkbox_freq = MyUI.checkbox("Frequency Domain", value=False, full=False)
-            number_min_freq.bind_enabled_from(checkbox_freq, "value")
-            number_max_freq.bind_enabled_from(checkbox_freq, "value")
+                    with MyUI.row():
+                        number_min_freq = ui.number(
+                            "Min Freq (Hz)", value=100,
+                            min=0, max=samplerate // 2, step=100
+                        ).classes("flex-1")
+                        number_max_freq = ui.number(
+                            "Max Freq (Hz)", value=samplerate // 2,
+                            min=0, max=samplerate // 2, step=100
+                        ).classes("flex-1")
+
+                # Right 1/3 block
+                with ui.column().classes("flex-[1]"):
+                    checkbox_norm_each = MyUI.checkbox("Normalising Each", value=False, full=False)
+                    checkbox_freq = MyUI.checkbox("Frequency Domain", value=False, full=False)
+
+                    number_min_freq.bind_enabled_from(checkbox_freq, "value")
+                    number_max_freq.bind_enabled_from(checkbox_freq, "value")
 
         # Plot and control
         fig = ui.matplotlib(figsize=(6, 1.5 * max(n_channels / 2, 3))).classes("w-full self-center").figure
