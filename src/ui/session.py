@@ -984,7 +984,7 @@ def _initialize_session_ui(e):
                             "Delta X (cm)", min=1, value=10,
                             on_change=_on_change_layout_params)
                         CM["number_dy"] = MyUI.number_int(
-                            "Delta Y (cm)", min=1, value=0,
+                            "Delta Y (cm)", min=1, value=10,
                             on_change=_on_change_layout_params)
                     with ui.column().classes('flex-1'):
                         CM["number_sx"] = MyUI.number_int(
