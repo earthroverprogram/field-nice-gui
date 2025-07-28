@@ -120,9 +120,14 @@ class Datalogger:
 
                 for ch in self.active_channels:
                     wave = np.sin(2 * np.pi * (ch + 1) * np.arange(blocksize) / samplerate)
-                    base[:, ch] = (scale * (base[:, ch] + wave)).astype(dtype)
+                    base[:, ch] = scale * (base[:, ch] + wave)
 
-                selected = base[:, self.active_channels]
+                if np.issubdtype(dtype, np.integer):
+                    info = np.iinfo(dtype)
+                    selected = np.clip(base[:, self.active_channels], info.min, info.max).astype(dtype)
+                else:
+                    selected = base[:, self.active_channels].astype(dtype)
+
                 if self.mode == 'record':
                     self.buffer.append(selected)
                 elif self.mode == 'monitor' and self.on_data:
