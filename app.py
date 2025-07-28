@@ -10,7 +10,8 @@ from src.ui.experiment import initialize as experiment_initialize
 from src.ui.lics import initialize as lics_initialize
 from src.ui.session import initialize as session_initialize
 from src.ui.utils import MyUI
-from src.ui.view import initialize as view_initialize
+
+# from src.ui.view import initialize as view_initialize
 
 # ------------------------
 # Parse command-line args
@@ -79,7 +80,7 @@ with ui.row().classes('justify-center w-full'):
         t1 = ui.tab('LICS', icon='grass').classes('w-48')
         t2 = ui.tab('SESSION', icon='grain').classes('w-48')
         t3 = ui.tab('EXPERIMENT', icon='gavel').classes('w-48')
-        t4 = ui.tab('VIEW', icon='troubleshoot').classes('w-48')
+        # t4 = ui.tab('VIEW', icon='troubleshoot').classes('w-48')
         t5 = ui.tab('ABOUT', icon='info_outline').classes('w-48')
 tabs.value = t1
 
@@ -93,8 +94,8 @@ with ui.tab_panels(tabs, value=t1).classes('w-full'):
         session_initialize()
     with ui.tab_panel(t3):
         experiment_initialize()
-    with ui.tab_panel(t4):
-        view_initialize()
+    # with ui.tab_panel(t4):
+    #     view_initialize()
     with ui.tab_panel(t5):
         about_initialize()
 

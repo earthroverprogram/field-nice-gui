@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import re
+import subprocess
 import time
 import warnings
 from datetime import datetime
@@ -674,6 +675,29 @@ def _on_change_experiment_number(_=None):
         folder.parent / f"experiment_{number + 1:04d}/preview.png",
         fallbacks=fallbacks
     )
+    data_exist = (folder.parent / f"experiment_{number:04d}/data.mseed").exists()
+    CM.update("button_snuffler", props="disable", props_remove=data_exist)
+
+
+def _view_in_snuffler(_=None):
+    """Launch the Snuffler tool to view the corresponding .mseed file."""
+
+    # Get the currently selected experiment number from the local state
+    number, folder = _get_experiment_folder()
+    mseed_path = folder.parent / f"experiment_{number:04d}/data.mseed"
+
+    # Check if the .mseed file exists
+    if not mseed_path.exists():
+        ui.notify(f'{mseed_path} does not exist', type='negative')
+        return
+
+    try:
+        # Launch Snuffler in a separate process (not blocking UI)
+        subprocess.Popen(['snuffler', str(mseed_path)])
+    except Exception as e:
+        ui.notify(f'Failed to launch Snuffler: {e}', type='negative')
+    else:
+        ui.notify(f'Snuffler launched for {mseed_path.name}', type='positive')
 
 
 ##########
@@ -1108,6 +1132,10 @@ def _initialize_experiment_ui(_=None):
         # Preview
         with MyUI.expansion("Output Preview", value=True).classes("w-full"):
             CM["previewer"] = ThreeImageViewer()
+
+        # Snuffler
+        CM["button_snuffler"] = ui.button("View in Snuffler", on_click=_view_in_snuffler) \
+            .classes("self-center").props("disable")
 
     # Safe call
     _on_change_experiment_number()
