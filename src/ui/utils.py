@@ -233,13 +233,9 @@ class MyUI:
             try:
                 val = float(e.sender.value)
                 val = int(round(val))
-                if min is not None and val < min:
-                    val = min
-                if max is not None and val > max:
-                    val = max
                 e.sender.value = val
             except:  # noqa
-                e.sender.value = min or 0  # fallback
+                e.sender.value = e.sender.min or 0  # fallback
 
         return ui.number(
             label,
