@@ -553,6 +553,19 @@ def _on_change_select_session(_=None):
         # Input name
         if not CM["input_name"].validate():
             CM["checkbox_04d"].value = False
+
+        # Refresh experiment once
+        # This is an ugly workaround, and here is why:
+        # 1. In experiment.py, its UI initializer is called whenever "select_session" is changed.
+        #    However, at the moment of session change, only the select_session itself is changed but not the other fields.
+        #    It then causes "one frame delay" when we use session.get_session_dict(), which reads from UI.
+        # 2. The correct way is, in experiment.py, we should read everything from the selected session's json (model).
+        #    This however demands tedious coding. I still prefer to quicly read from UI (view).
+        #    They are equivalent because session is locked if on disk
+        # 3. Finally, we use this workaround -- just do one more experiment initialization manually.
+        from src.ui.experiment import _initialize_experiment_ui
+        _initialize_experiment_ui()
+
     else:
         # Load previous with fallback: last selection -> latest creation -> default
         _restore_for_new()
