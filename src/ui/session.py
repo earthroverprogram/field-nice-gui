@@ -191,12 +191,13 @@ def _reset_shift_trailing():
     layout = _compute_layout(plus_shift=False)
 
     # Clear shift
-    CM["shift_layout"] = {}
+    if not CM["keep_shift_overwrite"]:
+        CM["shift_layout"] = {}
 
     # Reset trailing channel
     if CM["number_st_ch"] is None or layout is None:
         return
-    
+
     min_ch = len(layout) + 1
     CM["number_st_ch"].min = min_ch
     if CM["number_st_ch"].value < min_ch:
@@ -267,7 +268,7 @@ def _on_change_naming_formatter(_=None):
         return
     if not CM["input_naming"].validate():
         CM.update("input_naming", "FX.LOM{CH:02d}.Z")
-    if _is_new():
+    if _is_new() and not CM["keep_shift_overwrite"]:
         CM["overwrite_naming"] = {}
     _refresh_layout()
 
@@ -476,8 +477,11 @@ def _load_session(json_path, input_name):
         CM.update("input_time", data["create_time"])
 
     # Must manually refresh
-    _on_change_layout_params()  # Will discard location shifting in New
-    _on_change_naming_formatter()  # Will discard naming overwriting in New
+    # When loading from disk, do not reset shift and overwrite from table
+    CM["keep_shift_overwrite"] = True
+    _on_change_layout_params()
+    _on_change_naming_formatter()
+    CM["keep_shift_overwrite"] = False
 
 
 def _restore_for_new():
