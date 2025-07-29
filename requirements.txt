@@ -9,3 +9,4 @@ obspy~=1.4.2
 sounddevice~=0.5.2
 PyQt5~=5.15.11
 pyrocko~=2025.1.21
+python-osc~=1.9.3

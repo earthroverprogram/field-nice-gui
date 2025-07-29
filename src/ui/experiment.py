@@ -1002,7 +1002,7 @@ def _initialize_experiment_ui(_=None):
         #################
         with MyUI.cap_card("Summary"):
             with MyUI.expansion(f"Experiment Details: 【 0 Channels 】") as CM["expansion_summary"]:
-                with MyUI.row(gap=10):
+                with MyUI.row(gap=4):
                     # --- Table and Figure ---
                     # Table
                     CM["table_summary"] = ui.table(
@@ -1016,7 +1016,7 @@ def _initialize_experiment_ui(_=None):
                         rows=[],
                         row_key='channel',
                         pagination=8
-                    ).classes('flex-1 q-table--col-auto-width')
+                    ).classes('flex-[4] q-table--col-auto-width')
 
                     # Shift
                     CM["overwrite_gain"] = {}  # Data
@@ -1055,7 +1055,7 @@ def _initialize_experiment_ui(_=None):
                     CM["table_summary"].on('_on_change_summary_bypass', _on_change_summary_bypass)
 
                     # Figure
-                    CM["figure_summary"] = ui.matplotlib(dpi=200, figsize=(4, 4)).classes("flex-1").figure
+                    CM["figure_summary"] = ui.matplotlib(dpi=200, figsize=(4, 4)).classes("flex-[3]").figure
 
             # --- Notes ---
             with MyUI.row():
