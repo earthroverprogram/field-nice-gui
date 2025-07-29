@@ -2,7 +2,6 @@ import asyncio
 import json
 import os
 import re
-import subprocess
 import time
 import warnings
 from datetime import datetime
@@ -18,12 +17,12 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
 from nicegui import ui
 from obspy import Stream, Trace, UTCDateTime
-
+import tempfile
+import subprocess
 from src.device.datalogger import Datalogger
 from src.ui import GS, DATA_DIR
 from src.ui.session import get_session_dict
 from src.ui.utils import ControlManager, MyPlot, MyUI, CallbackBlocker, ThreeImageViewer, _detect_snuffler
-from src.osc_lib.evo16 import set_preamp_gain_evo16
 
 # --- UI Control Registry ---
 CM = ControlManager()
@@ -321,15 +320,6 @@ def _refresh_summary():
         CM["table_summary"].rows = new_rows
         CM["table_summary"].update()
         CM["table_summary"].style("background-color: var(--q-surface)")
-
-        # Set preamp on EVO-16
-        if CM["session_dict"]["datalogger"]["name"] == "EVO-16" and CM["checkbox_gain_evo16"].value:
-            ch_gain = {row["channel"]: row["gain"] for row in new_rows}
-            try:
-                set_preamp_gain_evo16(device="EVO-16", channel_gain_dict=ch_gain)
-                ui.notify(f"Successfully set preamp gain on EVO-16.", color='positive')
-            except Exception as e:
-                ui.notify(f"Error setting preamp gain on EVO-16: {e}.", color='warning')
 
     # Figure
     with CM["figure_summary"]:
@@ -691,23 +681,48 @@ def _on_change_experiment_number(_=None):
 
 def _view_in_snuffler(_=None):
     """Launch the Snuffler tool to view the corresponding .mseed file."""
-
-    # Get the currently selected experiment number from the local state
+    # Get experiment number and construct the expected mseed file path
     number, folder = _get_experiment_folder()
     mseed_path = folder.parent / f"experiment_{number:04d}/data.mseed"
 
-    # Check if the .mseed file exists
+    # Ensure the .mseed file exists before launching Snuffler
     if not mseed_path.exists():
         ui.notify(f'{mseed_path} does not exist', type='negative')
         return
 
+    snuffler_path = CM["input_path_snuffler"].value
+
+    # Create a temporary file to capture stderr output
+    with tempfile.NamedTemporaryFile(delete=False, mode='w+', encoding='utf-8') as tmp:
+        stderr_path = tmp.name
+
     try:
-        # Launch Snuffler in a separate process (not blocking UI)
-        subprocess.Popen([CM["input_path_snuffler"].value, str(mseed_path)])
+        # Launch Snuffler as a background process, redirecting stderr to temp file
+        subprocess.Popen(
+            [snuffler_path, str(mseed_path)],
+            stdout=subprocess.DEVNULL,
+            stderr=open(stderr_path, 'w'),
+        )
     except Exception as e:
         ui.notify(f'Failed to launch Snuffler: {e}', type='negative')
-    else:
-        ui.notify(f'Snuffler launched for {mseed_path.name}', type='positive')
+        return
+
+    # Poll stderr file for up to 1.0 second to allow error output to flush
+    try:
+        for _ in range(10):  # check every 0.1s, total 1.0s
+            with open(stderr_path, 'r') as fs:
+                err = fs.read().strip()
+            if err:
+                ui.notify(f'Snuffler error:\n{err.splitlines()[0]}', type='warning')
+                break
+            time.sleep(0.1)
+        else:
+            ui.notify(f'Snuffler launched for {mseed_path.name}', type='positive')
+    finally:
+        try:
+            os.remove(stderr_path)
+        except:  # noqa
+            pass
 
 
 ##########
@@ -804,6 +819,7 @@ async def _record():
         CM["button_record"].props(remove="disable")
         await asyncio.sleep(0.2)
         CM["progress"].set_value(0.0)
+        CM["display_countdown"].style("display: none;")
         _on_change_experiment_number()
 
     def _start_record():
@@ -824,6 +840,10 @@ async def _record():
         _save_data(data)
         await _reset_ui()
         return
+
+    # Set gain on EVO-16
+    if CM["checkbox_gain_evo16"]:
+        _set_preamp_gain_evo16()
 
     # Retrieve recording parameters
     info = CM["session_dict"]["datalogger"]
@@ -913,8 +933,38 @@ def _go_next():
 
 def _on_change_edit_snuffler(_=None):
     """User edit snuffler path."""
-    if "snuffler" not in CM["input_path_snuffler"].value:
+    if not CM["input_path_snuffler"].value.endswith("snuffler"):
         CM["input_path_snuffler"].value = _detect_snuffler()
+
+
+def _set_preamp_gain_evo16():
+    # Set preamp on EVO-16
+    if not (CM["session_dict"]["datalogger"]["name"] == "EVO-16"
+            and CM["session_dict"]["datalogger"]["n_channels"] > 0):
+        return
+
+    ch_gain = {row["channel"]: row["gain"] for row in CM["table_summary"].rows}
+    lines = [f"{ch} {gain:.2f} 0 0" for ch, gain in ch_gain.items()]
+    with tempfile.NamedTemporaryFile("w", delete=False, suffix=".txt") as fs:
+        temp_path = fs.name
+        fs.write("\n".join(lines))
+        fs.flush()
+
+    try:
+        result = subprocess.run(
+            ["python", "osc_lib/main.py", "--config", temp_path],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        print("[EVO-16 SET] stdout:", result.stdout)
+        print("[EVO-16 SET] stderr:", result.stderr)
+        ui.notify("Successfully set preamp gain on EVO-16.", color='positive')
+    except subprocess.CalledProcessError as e:
+        ui.notify(f"[EVO-16] Failed: {e.stderr.strip() or e}", color='warning')
+    except Exception as e:
+        ui.notify(f"[EVO-16] Unexpected error: {e}", color='warning')
 
 
 ###########################
@@ -1061,9 +1111,17 @@ def _initialize_experiment_ui(_=None):
                     # Figure
                     CM["figure_summary"] = ui.matplotlib(dpi=200, figsize=(4, 4)).classes("flex-[3]").figure
 
-            # Gain on device
-            CM["checkbox_gain_evo16"] = MyUI.checkbox("Update Gain on Device (Currently EVO-16 Only)",
-                                                      value=False)
+                # Gain on device
+                with ui.row().classes("justify-content-start w-full flex-nowrap"):
+                    CM["button_gain_evo16"] = ui.button("Set Gain on Device (EVO-16 Only)",
+                                                        on_click=_set_preamp_gain_evo16) \
+                        .classes('text-white font-semibold h-12 w-1/4')
+                    CM["checkbox_gain_evo16"] = MyUI.checkbox(
+                        "Set Gain on Device When Starting Recording (EVO-16 only)", value=True)
+                valid_evo_16 = (CM["session_dict"]["datalogger"]["name"] == "EVO-16" and
+                                CM["session_dict"]["datalogger"]["n_channels"] > 0)
+                CM.update("button_gain_evo16", props="disable", props_remove=valid_evo_16)
+                CM.update("checkbox_gain_evo16", props="disable", props_remove=valid_evo_16)
 
             # --- Notes ---
             with MyUI.row():
@@ -1087,13 +1145,13 @@ def _initialize_experiment_ui(_=None):
             # --- Options ---
             with ui.column().classes('flex-[3]'):
                 with MyUI.cap_card("Record Options", full=True, height_px=card_height):
-                    with MyUI.row():
+                    with MyUI.row().classes("flex-nowrap"):
                         # Countdown options
                         CM["checkbox_countdown"] = MyUI.checkbox("Countdown", value=True, full=False)
                         files = sorted([audio[:-4] for audio in os.listdir('assets/countdown')
                                         if audio.endswith('.mp3')]) + ["<Silent>"]
                         CM["select_voice"] = ui.select(
-                            files, value=np.random.choice(files[:-1])) \
+                            files, value="Female Soft") \
                             .props('filled').classes('q-pt-none').classes('flex-1') \
                             .bind_enabled_from(CM["checkbox_countdown"], 'value')
 
