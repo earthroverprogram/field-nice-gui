@@ -797,7 +797,7 @@ def _monitor_device(_=None):
 
         # Update signal buffer
         window = int(window_selector.value)
-        signal_buffer = np.vstack([signal_buffer, block])[-window:]
+        signal_buffer = np.vstack([signal_buffer, block.astype(np.float32)])[-window:]
         if signal_buffer.shape[0] != window:
             return  # Wait until buffer is full
 
