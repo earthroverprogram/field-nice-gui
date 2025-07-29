@@ -675,7 +675,7 @@ def _on_change_experiment_number(_=None):
         folder.parent / f"experiment_{number - 1:04d}/preview.png",
         folder.parent / f"experiment_{number:04d}/preview.png",
         folder.parent / f"experiment_{number + 1:04d}/preview.png",
-        fallbacks=fallbacks
+        fallbacks=fallbacks, number=number
     )
     data_exist = (folder.parent / f"experiment_{number:04d}/data.mseed").exists()
     CM.update("button_snuffler", props="disable", props_remove=data_exist)
@@ -1115,12 +1115,12 @@ def _initialize_experiment_ui(_=None):
                     CM["figure_summary"] = ui.matplotlib(dpi=200, figsize=(4, 4)).classes("flex-[3]").figure
 
                 # Gain on device
-                with ui.row().classes("justify-content-start w-full flex-nowrap"):
-                    CM["button_gain_evo16"] = ui.button("Set Gain on Device (EVO-16 Only)",
+                with ui.row().classes("justify-content-start w-full flex-nowrap gap-10"):
+                    CM["button_gain_evo16"] = ui.button("Send Gain to EVO-16, NOW!",
                                                         on_click=_set_preamp_gain_evo16) \
                         .classes('text-white font-semibold h-12 w-1/4')
                     CM["checkbox_gain_evo16"] = MyUI.checkbox(
-                        "Set Gain on Device When Starting Recording (EVO-16 only)", value=True)
+                        "Send Gain to EVO-16 When Starting Recording", value=True)
                 session_dict = get_session_dict()
                 valid_evo_16 = (session_dict["datalogger"]["name"] == "EVO-16" and
                                 session_dict["datalogger"]["n_channels"] > 0)
@@ -1214,6 +1214,8 @@ def _initialize_experiment_ui(_=None):
         # Preview
         with MyUI.expansion("Output Preview", value=True).classes("w-full"):
             CM["previewer"] = ThreeImageViewer()
+            CM["previewer"].left_img.on("click", _go_previous)
+            CM["previewer"].right_img.on("click", _go_next)
 
             # Snuffler
             with MyUI.row().classes("items-center w-full"):

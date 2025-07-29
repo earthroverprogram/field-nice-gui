@@ -282,9 +282,13 @@ class ThreeImageViewer:
                 .style(f'height: {height}; gap: {gap}px; perspective: 1000px;'):
             self.left_img = ui.image('').style('''
                 width: 100%; height: 100%;
-                transform: rotateY(30deg);
+                transform: rotateY(24deg);
                 transform-origin: left;
+                opacity: 0.7;
             ''').classes(f'flex-[{ratio[0]}]').props('fit=contain')
+            self.left_icon = ui.icon('chevron_left') \
+                .classes('absolute left-2 top-1/2 -translate-y-1/2 '
+                         'text-6xl pointer-events-none text-primary')
 
             self.middle_img = ui.image('').style('''
                 width: 100%; height: 100%;
@@ -292,15 +296,23 @@ class ThreeImageViewer:
 
             self.right_img = ui.image('').style('''
                 width: 100%; height: 100%;
-                transform: rotateY(-30deg);
+                transform: rotateY(-24deg);
                 transform-origin: right;
+                opacity: 0.7;
             ''').classes(f'flex-[{ratio[2]}]').props('fit=contain')
+            ui.icon('chevron_right') \
+                .classes('absolute right-2 top-1/2 -translate-y-1/2 '
+                         'text-6xl pointer-events-none text-primary')
 
-    def set_images(self, left, middle, right, fallbacks):
+    def set_images(self, left, middle, right, fallbacks, number):
         """Set image sources. If a path doesn't exist, fallbacks are used."""
         self.left_img.set_source(left if Path(left).exists() else fallbacks[0])
         self.middle_img.set_source(middle if Path(middle).exists() else fallbacks[1])
         self.right_img.set_source(right if Path(right).exists() else fallbacks[2])
+        if number > 1:
+            self.left_icon.style('visibility: visible')
+        else:
+            self.left_icon.style('visibility: hidden')
 
 
 def _detect_snuffler():
