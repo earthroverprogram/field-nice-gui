@@ -22,7 +22,9 @@ from obspy import Stream, Trace, UTCDateTime
 from src.device.datalogger import Datalogger
 from src.ui import GS, DATA_DIR
 from src.ui.session import get_session_dict
-from src.ui.utils import ControlManager, MyPlot, MyUI, CallbackBlocker, ThreeImageViewer
+from src.ui.utils import ControlManager, MyPlot, MyUI, CallbackBlocker, ThreeImageViewer, _detect_snuffler
+
+# from src.osc_lib.evo16 import set_preamp_gain_evo16
 
 # --- UI Control Registry ---
 CM = ControlManager()
@@ -693,7 +695,7 @@ def _view_in_snuffler(_=None):
 
     try:
         # Launch Snuffler in a separate process (not blocking UI)
-        subprocess.Popen(['snuffler', str(mseed_path)])
+        subprocess.Popen([CM["input_path_snuffler"].value, str(mseed_path)])
     except Exception as e:
         ui.notify(f'Failed to launch Snuffler: {e}', type='negative')
     else:
@@ -911,6 +913,12 @@ def _go_previous():
 def _go_next():
     """Go next experiment."""
     CM["number_experiment"].value += 1
+
+
+def _on_change_edit_snuffler(_=None):
+    """User edit snuffler path."""
+    if "snuffler" not in CM["input_path_snuffler"].value:
+        CM["input_path_snuffler"].value = _detect_snuffler()
 
 
 ###########################
@@ -1145,9 +1153,14 @@ def _initialize_experiment_ui(_=None):
         with MyUI.expansion("Output Preview", value=True).classes("w-full"):
             CM["previewer"] = ThreeImageViewer()
 
-        # Snuffler
-        CM["button_snuffler"] = ui.button("View in Snuffler", on_click=_view_in_snuffler) \
-            .classes('self-center w-1/4 text-white font-semibold h-14').props("disable")
+            # Snuffler
+            with MyUI.row().classes("items-center w-full"):
+                ui.input().classes("flex-1").style('visibility: hidden')
+                with ui.row().classes("w-1/4 justify-center"):
+                    CM["button_snuffler"] = ui.button("View in Snuffler", on_click=_view_in_snuffler) \
+                        .classes('text-white font-semibold h-14 w-full')
+                CM["input_path_snuffler"] = ui.input("Full Path to Snuffler", value=_detect_snuffler()) \
+                    .classes('flex-1').on("blur", _on_change_edit_snuffler)
 
     # Safe call
     _on_change_experiment_number()
