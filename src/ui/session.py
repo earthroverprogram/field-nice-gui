@@ -193,12 +193,14 @@ def _reset_shift_trailing():
     # Clear shift
     CM["shift_layout"] = {}
 
-    if layout is not None:
-        # Reset trailing channel
-        min_ch = len(layout) + 1
-        CM["number_st_ch"].min = min_ch  # Must go first
-        if CM["number_st_ch"] and CM["number_st_ch"].value < min_ch:
-            CM.update("number_st_ch", min_ch)
+    # Reset trailing channel
+    if CM["number_st_ch"] is None or layout is None:
+        return
+    
+    min_ch = len(layout) + 1
+    CM["number_st_ch"].min = min_ch
+    if CM["number_st_ch"].value < min_ch:
+        CM.update("number_st_ch", value=min_ch)
 
 
 def _on_change_layout_params(_=None):
