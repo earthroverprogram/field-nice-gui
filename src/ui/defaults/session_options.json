@@ -83,6 +83,7 @@
     "Vertisol"
   ],
   "agriculture": [
+    "None",
     "Conventional",
     "Organic",
     "Agroforestry",
@@ -94,6 +95,7 @@
     "Experimental"
   ],
   "crop": [
+    "None",
     "Cereal",
     "Legume",
     "Root Crop",
