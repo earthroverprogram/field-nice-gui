@@ -1,4 +1,6 @@
 import json
+import os
+import shutil
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -279,7 +281,7 @@ class CallbackBlocker:
 
 
 class ThreeImageViewer:
-    def __init__(self, height='400px', ratio=(2, 3, 2), gap=10):
+    def __init__(self, height='320px', ratio=(2, 3, 2), gap=10):
         with ui.row().classes('items-center w-full') \
                 .style(f'height: {height}; gap: {gap}px; perspective: 1000px;'):
             self.left_img = ui.image('').style('''
@@ -303,3 +305,45 @@ class ThreeImageViewer:
         self.left_img.set_source(left if Path(left).exists() else fallbacks[0])
         self.middle_img.set_source(middle if Path(middle).exists() else fallbacks[1])
         self.right_img.set_source(right if Path(right).exists() else fallbacks[2])
+
+
+def _detect_snuffler():
+    """
+    Robustly detect the full path to the 'snuffler' executable.
+    Strategy:
+    1. Check if 'snuffler' is in system PATH using `shutil.which()`
+    2. Search in known Anaconda/Mambaforge base directories
+    3. Search all conda environments under ~/anaconda3/envs/** or ~/.conda/envs/**
+    4. Return full path if found, otherwise fallback to 'snuffler'
+    """
+    # Step 1: Try system PATH
+    path = shutil.which("snuffler")
+    if path:
+        return path
+
+    # Step 2: Check common conda base locations
+    candidate_dirs = [
+        Path.home() / "anaconda3",
+        Path.home() / "miniconda3",
+        Path.home() / "mambaforge",
+        Path("/opt/anaconda3"),
+    ]
+
+    for base in candidate_dirs:
+        envs_dir = base / "envs"
+        if envs_dir.exists():
+            for env in envs_dir.iterdir():
+                snuffler_path = env / "bin" / "snuffler"
+                if snuffler_path.exists() and os.access(snuffler_path, os.X_OK):
+                    return str(snuffler_path)
+
+    # Step 3: Check user-specific envs (~/.conda/envs)
+    user_envs = Path.home() / ".conda" / "envs"
+    if user_envs.exists():
+        for env in user_envs.iterdir():
+            snuffler_path = env / "bin" / "snuffler"
+            if snuffler_path.exists() and os.access(snuffler_path, os.X_OK):
+                return str(snuffler_path)
+
+    # Step 4: Fallback
+    return "snuffler"
