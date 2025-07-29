@@ -1,5 +1,5 @@
 nicegui~=2.21.1
-numpy~=1.26.4
+numpy~=2.2.6
 countryinfo~=0.1.2
 pycountry~=24.6.1
 matplotlib~=3.10.3
@@ -7,6 +7,4 @@ yaml~=0.2.5
 pyyaml~=6.0.2
 obspy~=1.4.2
 sounddevice~=0.5.2
-PyQt5~=5.15.11
-pyrocko~=2025.1.21
 python-osc~=1.9.3
