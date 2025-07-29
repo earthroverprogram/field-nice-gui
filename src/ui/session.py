@@ -1143,7 +1143,7 @@ def _initialize_session_ui(e):
             with MyUI.cap_card("Datalogger", full=False, height_px=height_px):
                 # --- Datalogger ---
                 CM["detected_devices"] = {}
-                with MyUI.row(gap=4):
+                with MyUI.row(gap=4).classes("flex-nowrap"):
                     # No callback changing device
                     CM["select_device"] = ui.select(
                         ["Dummy"], value="Dummy", label="Device",
