@@ -23,8 +23,7 @@ from src.device.datalogger import Datalogger
 from src.ui import GS, DATA_DIR
 from src.ui.session import get_session_dict
 from src.ui.utils import ControlManager, MyPlot, MyUI, CallbackBlocker, ThreeImageViewer, _detect_snuffler
-
-# from src.osc_lib.evo16 import set_preamp_gain_evo16
+from src.osc_lib.evo16 import set_preamp_gain_evo16
 
 # --- UI Control Registry ---
 CM = ControlManager()
@@ -322,6 +321,15 @@ def _refresh_summary():
         CM["table_summary"].rows = new_rows
         CM["table_summary"].update()
         CM["table_summary"].style("background-color: var(--q-surface)")
+
+        # Set preamp on EVO-16
+        if CM["session_dict"]["datalogger"]["name"] == "EVO-16" and CM["checkbox_gain_evo16"].value:
+            ch_gain = {row["channel"]: row["gain"] for row in new_rows}
+            try:
+                set_preamp_gain_evo16(device="EVO-16", channel_gain_dict=ch_gain)
+                ui.notify(f"Successfully set preamp gain on EVO-16.", color='positive')
+            except Exception as e:
+                ui.notify(f"Error setting preamp gain on EVO-16: {e}.", color='warning')
 
     # Figure
     with CM["figure_summary"]:
@@ -825,18 +833,6 @@ async def _record():
     datatype = info["datatype"]
     channel_list = list(CM["session_dict"]["naming"].keys())
 
-    # set preamp on EVO-16
-    if logical_name == "EVO-16":
-        ch_gain = {}
-        for row in CM["table_summary"].rows:
-            ch_gain[row["channel"]] = row["gain"]
-        try:
-            Datalogger.set_preamp_gain(device=logical_name, channel_gain_dict=ch_gain)
-        except Exception as ex:
-            ui.notify(f"Failed to set preamp gain on EVO-16: {ex}", color='negative')
-            await _reset_ui()
-            return
-
     # Optional countdown before recording starts
     if CM["checkbox_countdown"].value:
         # Disable button during countdown
@@ -980,7 +976,7 @@ def _initialize_experiment_ui(_=None):
         #############
         # Auto Gain #
         #############
-        with MyUI.cap_card("Auto Gain"):
+        with MyUI.cap_card("Auto Preamp Gain"):
             with MyUI.expansion(f"Gain Function"):
                 with MyUI.row():
                     with ui.column().classes('flex-[10] gap-1'):
@@ -1064,6 +1060,10 @@ def _initialize_experiment_ui(_=None):
 
                     # Figure
                     CM["figure_summary"] = ui.matplotlib(dpi=200, figsize=(4, 4)).classes("flex-[3]").figure
+
+            # Gain on device
+            CM["checkbox_gain_evo16"] = MyUI.checkbox("Update Gain on Device (Currently EVO-16 Only)",
+                                                      value=False)
 
             # --- Notes ---
             with MyUI.row():
