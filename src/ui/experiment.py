@@ -128,7 +128,8 @@ def _compute_summary():
     """Compute summary of final experiment layout."""
 
     # --- Compute layout ---
-    layout = CM["session_dict"]["layout"]
+    session_dict = get_session_dict()
+    layout = session_dict["layout"]
     if layout is None:
         ui.notify("Impossible Error. Report for debugging.", color="negative")
         return None
@@ -137,7 +138,7 @@ def _compute_summary():
     src_xy = np.array([CM["number_x"].value, CM["number_y"].value], dtype=int)
 
     # --- Compute trailing (if any) ---
-    st_dict = CM["session_dict"]["st_dict"]
+    st_dict = session_dict["st_dict"]
     layout_with_st = layout
     if st_dict:
         shift_xy = np.array([st_dict["shift_x"], st_dict["shift_y"]], dtype=int)
@@ -178,7 +179,7 @@ def _compute_summary():
 
     # --- Overwrite gains if manually set ---
     if CM["overwrite_gain"]:
-        channels = list(CM["session_dict"]["naming"].keys())
+        channels = list(session_dict["naming"].keys())
         ch2idx = {ch: idx for idx, ch in enumerate(channels)}
         for ch, gain in CM["overwrite_gain"].items():
             if ch in ch2idx and ch2idx[ch] < len(gains):
@@ -292,7 +293,7 @@ def _refresh_summary():
 
         # Expansion
         CM["expansion_summary"].text = \
-            f"Summary Details: 【 {len(CM['session_dict']['naming'])} Channels 】"
+            f"Summary Details: 【 {len(get_session_dict()['naming'])} Channels 】"
         # Table
         new_rows = []
         for idx, ((x, y), gain) in enumerate(
@@ -431,9 +432,10 @@ def _check_save(_=None):
         CM.update("text_final", text=loc_string)
         return
 
-    n_device_channels = CM["session_dict"]["datalogger"]["n_channels"]
+    session_dict = get_session_dict()
+    n_device_channels = session_dict["datalogger"]["n_channels"]
     device_channels = set(range(1, n_device_channels + 1))
-    request_channels = set(CM["session_dict"]["naming"].keys())
+    request_channels = set(session_dict["naming"].keys())
     diff = set(request_channels) - set(device_channels)
 
     is_channel_enough = len(diff) == 0
@@ -749,8 +751,9 @@ def _save_data(data: np.ndarray):
 
     # Step 3: Create obspy Stream and fill with traces
     stream = Stream()
-    naming_dict = CM["session_dict"]["naming"]
-    samplerate = CM["session_dict"]["datalogger"]["samplerate"]
+    session_dict = get_session_dict()
+    naming_dict = session_dict["naming"]
+    samplerate = session_dict["datalogger"]["samplerate"]
 
     now = UTCDateTime.now()
     for ch_index, (logical_ch, naming) in enumerate(naming_dict.items()):
@@ -847,12 +850,13 @@ async def _record():
         _set_preamp_gain_evo16()
 
     # Retrieve recording parameters
-    info = CM["session_dict"]["datalogger"]
+    session_dict = get_session_dict()
+    info = session_dict["datalogger"]
     logical_name = info["name"]
     duration = info["duration"]
     samplerate = info["samplerate"]
     datatype = info["datatype"]
-    channel_list = list(CM["session_dict"]["naming"].keys())
+    channel_list = list(session_dict["naming"].keys())
 
     # Optional countdown before recording starts
     if CM["checkbox_countdown"].value:
@@ -940,8 +944,9 @@ def _on_change_edit_snuffler(_=None):
 
 def _set_preamp_gain_evo16():
     # Set preamp on EVO-16
-    if not (CM["session_dict"]["datalogger"]["name"] == "EVO-16"
-            and CM["session_dict"]["datalogger"]["n_channels"] > 0):
+    session_dict = get_session_dict()
+    if not (session_dict["datalogger"]["name"] == "EVO-16"
+            and session_dict["datalogger"]["n_channels"] > 0):
         return
 
     ch_gain = {row["channel"]: row["gain"] for row in CM["table_summary"].rows}
@@ -982,9 +987,6 @@ def _initialize_experiment_ui(_=None):
         if session == "<NEW>":
             ui.label('⚠️ Please select a Session.').classes('text-xl')
             return
-
-        # Get everything of session
-        CM["session_dict"] = get_session_dict()
 
         with MyUI.row():
             with ui.column().classes("flex-1"):
@@ -1119,8 +1121,9 @@ def _initialize_experiment_ui(_=None):
                         .classes('text-white font-semibold h-12 w-1/4')
                     CM["checkbox_gain_evo16"] = MyUI.checkbox(
                         "Set Gain on Device When Starting Recording (EVO-16 only)", value=True)
-                valid_evo_16 = (CM["session_dict"]["datalogger"]["name"] == "EVO-16" and
-                                CM["session_dict"]["datalogger"]["n_channels"] > 0)
+                session_dict = get_session_dict()
+                valid_evo_16 = (session_dict["datalogger"]["name"] == "EVO-16" and
+                                session_dict["datalogger"]["n_channels"] > 0)
                 CM.update("button_gain_evo16", props="disable", props_remove=valid_evo_16)
                 CM.update("checkbox_gain_evo16", props="disable", props_remove=valid_evo_16)
 
