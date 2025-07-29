@@ -6,11 +6,11 @@ from socket import AF_INET, SOCK_DGRAM, SOCK_STREAM, socket
 from struct import pack
 from uuid import getnode
 
-from src.osc_lib.binary import packData, unpackData
-from src.osc_lib.log import logger
-from src.osc_lib.message_keys import ANNOUNCE_KEYS, JUCE_HEADER_KEYS, TCP_ANNOUNCE_KEYS
-from src.osc_lib.message_types import MessageTypes
-from src.osc_lib.node_types import NodeTypes
+from binary import packData, unpackData
+from log import logger
+from message_keys import ANNOUNCE_KEYS, JUCE_HEADER_KEYS, TCP_ANNOUNCE_KEYS
+from message_types import MessageTypes
+from node_types import NodeTypes
 
 try:
     from collections.abc import Iterable
