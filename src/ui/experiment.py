@@ -474,8 +474,8 @@ def _get_experiment_folder():
     return number, folder
 
 
-def _save_experiment():
-    """Save current experiment."""
+def _save_experiment_meta():
+    """Save current experiment meta."""
     number, folder = _get_experiment_folder()
     folder.mkdir(parents=True, exist_ok=True)
     json_path = folder / "ui_state.json"
@@ -738,13 +738,14 @@ def _save_data(data: np.ndarray):
     - Also generates waveform preview as PNG
     """
 
-    # Step 1: Save experiment meta first
-    if not _save_experiment():
+    # Step 1: Save experiment meta
+    if not _save_experiment_meta():
         ui.notify("Failed to save experiment meta. Data saving also skipped.", color='negative')
         return
 
-    # Step 2: Get target folder
+    # Step 2: Save layout
     number, folder = _get_experiment_folder()
+    CM["figure_summary"].savefig(folder / "layout.png")
 
     # Step 3: Create obspy Stream and fill with traces
     stream = Stream()
