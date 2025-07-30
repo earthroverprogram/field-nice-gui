@@ -960,6 +960,37 @@ def _set_preamp_gain_evo16():
         ui.notify(f"[EVO-16] Unexpected error: {e}", color='warning')
 
 
+def _load_option(key, default):
+    """ Load option from json """
+    json_path = "src/ui/temp/options.json"
+    try:
+        with open(json_path, "r", encoding="utf-8") as fs:
+            data = json.load(fs)
+        return data.get(key, default)
+    except:  # noqa
+        return default
+
+
+def _save_option(key, val):
+    """ Save option to json """
+    json_path = "src/ui/temp/options.json"
+    try:
+        if os.path.exists(json_path):
+            with open(json_path, "r", encoding="utf-8") as fs:
+                data = json.load(fs)
+        else:
+            data = {}
+    except:  # noqa
+        data = {}
+
+    data[key] = val
+    try:
+        with open(json_path, "w", encoding="utf-8") as fs:
+            json.dump(data, fs, indent=2)  # noqa
+    except:  # noqa
+        pass  # No need to prompt user, just use default
+
+
 ###########################
 # MAIN UI INITIALIZATION  #
 ###########################
@@ -1016,7 +1047,7 @@ def _initialize_experiment_ui(_=None):
         #############
         # Auto Gain #
         #############
-        with MyUI.cap_card("Auto Preamp Gain"):
+        with MyUI.cap_card("Auto Gain"):
             with MyUI.expansion(f"Gain Function"):
                 with MyUI.row():
                     with ui.column().classes('flex-[10] gap-1'):
@@ -1044,7 +1075,7 @@ def _initialize_experiment_ui(_=None):
             #################
             # Final summary #
             #################
-            with MyUI.expansion(f"Experiment Details: 【 0 Channels 】") as CM["expansion_summary"]:
+            with MyUI.expansion(f"Summary: 【 0 Channels 】") as CM["expansion_summary"]:
                 with MyUI.row(gap=4):
                     # --- Table and Figure ---
                     # Table
@@ -1106,7 +1137,10 @@ def _initialize_experiment_ui(_=None):
                                                     on_click=_set_preamp_gain_evo16) \
                     .classes('text-white font-semibold h-12 w-1/4')
                 CM["checkbox_gain_evo16"] = MyUI.checkbox(
-                    "Send Gain to EVO-16 When Starting Recording", value=True)
+                    "Send Gain to EVO-16 When Starting Recording",
+                    value=_load_option('checkbox_gain_evo16_value', True),
+                    on_change=lambda e: _save_option('checkbox_gain_evo16_value', e.value),
+                )
             session_dict = get_session_dict()
             valid_evo_16 = (session_dict["datalogger"]["name"] == "EVO-16" and
                             session_dict["datalogger"]["n_channels"] > 0)
@@ -1130,11 +1164,16 @@ def _initialize_experiment_ui(_=None):
                 with MyUI.cap_card("Record Options", full=True, height_px=card_height):
                     with MyUI.row().classes("flex-nowrap"):
                         # Countdown options
-                        CM["checkbox_countdown"] = MyUI.checkbox("Countdown", value=True, full=False)
+                        CM["checkbox_countdown"] = MyUI.checkbox("Countdown",
+                                                                 value=_load_option('checkbox_countdown_value', True),
+                                                                 on_change=lambda e: _save_option(
+                                                                     'checkbox_countdown_value', e.value),
+                                                                 full=False)
                         files = sorted([audio[:-4] for audio in os.listdir('assets/countdown')
                                         if audio.endswith('.mp3')]) + ["<Silent>"]
                         CM["select_voice"] = ui.select(
-                            files, value="Female Soft") \
+                            files, value=_load_option("select_voice_value", "Female Soft"),
+                            on_change=lambda e: _save_option('select_voice_value', e.value), ) \
                             .props('filled').classes('q-pt-none').classes('flex-1') \
                             .bind_enabled_from(CM["checkbox_countdown"], 'value')
 
@@ -1151,15 +1190,29 @@ def _initialize_experiment_ui(_=None):
 
                     # Check channels
                     CM["checkbox_check_ch"] = MyUI.checkbox("Ensure Enough Channels",
-                                                            value=True, full=True, on_change=_check_save)
+                                                            value=_load_option('checkbox_check_ch_value', True),
+                                                            full=True,
+                                                            on_change=lambda e: (
+                                                                _save_option('checkbox_check_ch_value', e.value),
+                                                                _check_save())
+                                                            )
 
                     # Go next after record
-                    CM["checkbox_next"] = MyUI.checkbox("Go Next after Recording", value=True, full=True)
+                    CM["checkbox_next"] = MyUI.checkbox("Go Next after Recording",
+                                                        value=_load_option("checkbox_next_value", True), full=True,
+                                                        on_change=lambda e: _save_option('checkbox_next_value',
+                                                                                         e.value))
 
                     # Source increment
                     with MyUI.row():
-                        CM["number_inc_x"] = MyUI.number_int("Src Incr X (cm)", value=10, full=False)
-                        CM["number_inc_y"] = MyUI.number_int("Src Incr Y (cm)", value=0, full=False)
+                        CM["number_inc_x"] = MyUI.number_int("Src Incr X (cm)",
+                                                             value=_load_option("number_inc_x_value", 0), full=False,
+                                                             on_change=lambda e: _save_option('number_inc_x_value',
+                                                                                              e.value))
+                        CM["number_inc_y"] = MyUI.number_int("Src Incr Y (cm)",
+                                                             value=_load_option("number_inc_y_value", 0), full=False,
+                                                             on_change=lambda e: _save_option('number_inc_y_value',
+                                                                                              e.value))
 
             # --- Record ---
             CM["is_recording"] = False
