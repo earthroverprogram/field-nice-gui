@@ -762,7 +762,7 @@ def _refresh_device(_=None):
     _check_monitor()
 
 
-def _monitor_device(_=None):
+def monitor_device(_=None):
     """Open a dialog to monitor device signal in real time (time domain or frequency domain)."""
 
     # --- Step 1: Get current device settings from UI ---
@@ -1195,7 +1195,7 @@ def _initialize_session_ui(e):
                     with ui.row().style('align-items: center; height: 56px;'):
                         CM["button_monitor"] = ui.button(
                             icon="monitor_heart",
-                            on_click=_monitor_device
+                            on_click=monitor_device
                         ).classes('w-8 h-8')
 
                 CM["select_datatype"] = ui.select(
