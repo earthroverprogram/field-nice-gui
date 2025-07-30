@@ -835,6 +835,7 @@ async def _record():
     # Set gain on EVO-16
     if CM["checkbox_gain_evo16"]:
         _set_preamp_gain_evo16()
+        await asyncio.sleep(1.0)
 
     # Retrieve recording parameters
     session_dict = get_session_dict()
