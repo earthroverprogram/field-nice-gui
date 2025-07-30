@@ -146,6 +146,7 @@ def _on_change_select_lics(_=None):
         "input_notes"
     ]:
         CM.update(key, props="readonly", props_remove=is_new)
+    CM.update("button_latlon", props="disable", props_remove=is_new)
 
     # 2. Toggle visibility of controls
     CM.update("input_time", classes="hidden", classes_remove=not is_new)
@@ -266,7 +267,7 @@ def initialize():
                 "Longitude", value=lon,
                 min=-180, max=180, step=0.01, format='%.2f'
             ).classes('flex-1')
-            ui.button(icon="my_location", on_click=_fill_lat_lon).classes('w-8 h-8')
+            CM["button_latlon"] = ui.button(icon="my_location", on_click=_fill_lat_lon).classes('w-8 h-8')
         CM["number_heading"] = ui.number(
             "Heading", value=0.0,
             min=0, max=360, step=0.01, format='%.2f'
