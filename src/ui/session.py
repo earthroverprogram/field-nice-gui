@@ -327,6 +327,7 @@ def _check_save(_=None):
 
 def _save_session(_=None):
     """Save current session and update selection."""
+    _on_blur_name()
     name = CM["input_name"].value.strip()
     lics = CM["select_lics"].value
     folder = DATA_DIR / lics / name
@@ -474,7 +475,7 @@ def _load_session(json_path, input_name):
         CM.update("select_weather", data["on_site"]["weather"])
         CM.update("select_temperature", data["on_site"]["temperature"])
 
-        # Soil desciption
+        # Soil description
         CM.update("select_moisture", data["soil"]["moisture"])
         CM.update("select_texture", data["soil"]["texture"])
         CM.update("select_order", data["soil"]["order"])
