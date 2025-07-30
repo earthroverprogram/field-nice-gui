@@ -10,8 +10,8 @@ pip install -r requirements.txt
 NiceGUI requires **NumPy 2**, while **Pyrocko (Snuffler)** is only compatible with **NumPy 1**.  
 To use both:
 
-- Install **Pyrocko** in a **separate conda environment**.
-- The UI will automatically detect your `snuffler` executable.
+- **Must** install **Pyrocko** in a **separate conda environment**.
+- The UI will automatically detect your `snuffler` executable (if not, you can specify its full path in UI).
 
 ## ▶️ Run the App
 
