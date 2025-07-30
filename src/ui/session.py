@@ -391,6 +391,12 @@ def _save_session(_=None):
             "crop": CM["select_crop"].value,
             "cultivation": CM["select_cultivation"].value,
         },
+        "operators": {
+            "computer": CM["input_computer_op"].value,
+            "source": CM["input_source_op"].value,
+            "protocol": CM["input_protocol_op"].value,
+            "others": CM["input_others_op"].value
+        },
         "notes": CM["input_notes"].value.strip(),
         "create_time": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     }
@@ -472,6 +478,12 @@ def _load_session(json_path, input_name):
         CM.update("select_crop", data["conditions"]["crop"])
         CM.update("select_cultivation", data["conditions"]["cultivation"])
 
+        # Operators
+        CM.update("input_computer_op", data["operators"]["computer"])
+        CM.update("input_source_op", data["operators"]["source"])
+        CM.update("input_protocol_op", data["operators"]["protocol"])
+        CM.update("input_others_op", data["operators"]["others"])
+
         # Notes and time
         CM.update("input_notes", data["notes"])
         CM.update("input_time", data["create_time"])
@@ -522,6 +534,7 @@ def _on_change_select_session(_=None):
                 "select_weather", "select_temperature",
                 "select_moisture", "select_texture", "select_order",
                 "select_agriculture", "select_crop", "select_cultivation",
+                "input_computer_op", "input_source_op", "input_protocol_op", "input_others_op",
                 "input_notes"]:
         CM.update(key, props="readonly", props_remove=is_new)
     CM.update("code_custom", props="disable", props_remove=is_new)
@@ -1225,6 +1238,16 @@ def _initialize_session_ui(e):
                 _create_static_options("agriculture", "Agricultural System")
                 _create_static_options("crop", "Crop Type")
                 _create_static_options("cultivation", "Cultivation Method")
+
+        #############
+        # Operators #
+        #############
+        with MyUI.cap_card("Operators", full=True):
+            with MyUI.row():
+                CM["input_computer_op"] = ui.input("Computer").classes('flex-1')
+                CM["input_source_op"] = ui.input("Source").classes('flex-1')
+                CM["input_protocol_op"] = ui.input("Protocol").classes('flex-1')
+                CM["input_others_op"] = ui.input("We are just here").classes('flex-1')
 
         # --- Notes Input ---
         CM["input_notes"] = ui.input("Notes").classes('w-full')

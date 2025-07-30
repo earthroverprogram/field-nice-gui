@@ -4,12 +4,6 @@
     "x": -5,
     "y": 0
   },
-  "operators": {
-    "computer": "",
-    "source": "",
-    "protocol": "",
-    "others": ""
-  },
   "gain": {
     "template": "Geometric spreading (physics-based)",
     "code_param": "# Only provide `param` here\nparam = {\n    \"d0\": 10.0,\n    \"gain0\": -4.0\n}\n",

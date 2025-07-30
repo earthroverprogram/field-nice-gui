@@ -50,6 +50,12 @@
     "crop": "Unknown",
     "cultivation": "Unknown"
   },
+  "operators": {
+    "computer": "",
+    "source": "",
+    "protocol": "",
+    "others": ""
+  },
   "notes": "A Session example.",
   "create_time": "2025-07-16T17:51:41"
 }

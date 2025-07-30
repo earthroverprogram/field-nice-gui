@@ -494,12 +494,6 @@ def _save_experiment_meta():
             "x": int(CM["number_x"].value),
             "y": int(CM["number_y"].value)
         },
-        "operators": {
-            "computer": CM["input_computer_op"].value,
-            "source": CM["input_source_op"].value,
-            "protocol": CM["input_protocol_op"].value,
-            "others": CM["input_others_op"].value
-        },
         "gain": {
             "template": CM["select_gain"].value,
             "code_param": CM["code_gain_param"].value,
@@ -554,12 +548,6 @@ def _load_experiment(json_path, experiment_number, post_notes=True):
         # Source location
         CM.update("number_x", data["source_location"]["x"])
         CM.update("number_y", data["source_location"]["y"])
-
-        # Operators
-        CM.update("input_computer_op", data["operators"]["computer"])
-        CM.update("input_source_op", data["operators"]["source"])
-        CM.update("input_protocol_op", data["operators"]["protocol"])
-        CM.update("input_others_op", data["operators"]["others"])
 
         # Gain
         CM.update("select_gain", data["gain"]["template"])
@@ -627,7 +615,6 @@ def _on_change_experiment_number(_=None):
 
     # 1. Set all field readonly states based on selection
     for key in ["number_x", "number_y",
-                "input_computer_op", "input_source_op", "input_protocol_op", "input_others_op",
                 "select_gain",
                 "select_excitation", "select_direction", "select_coupling", "number_repeats",
                 "input_pre_notes"]:
@@ -1009,22 +996,12 @@ def _initialize_experiment_ui(_=None):
             ###################
             # Source Location #
             ###################
-            with MyUI.cap_card("Source Location", full=False, highlight=True):
+            with MyUI.cap_card("Source Location", full=True, highlight=True):
                 with MyUI.row():
                     CM["number_x"] = MyUI.number_int("Location X (cm)", value=-20,
                                                      on_change=_on_change_source_location, full=False)
                     CM["number_y"] = MyUI.number_int("Location Y (cm)", value=0,
                                                      on_change=_on_change_source_location, full=False)
-
-            #############
-            # Operators #
-            #############
-            with MyUI.cap_card("Operators", full=False):
-                with MyUI.row():
-                    CM["input_computer_op"] = ui.input("Computer").classes('flex-1')
-                    CM["input_source_op"] = ui.input("Source").classes('flex-1')
-                    CM["input_protocol_op"] = ui.input("Protocol").classes('flex-1')
-                    CM["input_others_op"] = ui.input("We are just here").classes('flex-1')
 
         #############
         # Auto Gain #
