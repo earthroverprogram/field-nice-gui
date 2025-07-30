@@ -834,8 +834,7 @@ async def _record():
 
     # Set gain on EVO-16
     if CM["checkbox_gain_evo16"]:
-        _set_preamp_gain_evo16()
-        await asyncio.sleep(1.0)
+        await asyncio.to_thread(_set_preamp_gain_evo16)
 
     # Retrieve recording parameters
     session_dict = get_session_dict()
@@ -1042,9 +1041,9 @@ def _initialize_experiment_ui(_=None):
                             .classes("flex-[6]").figure as CM["figure_gain"]:  # noqa
                         _plot_gain_curve(CM["figure_gain"])
 
-        #################
-        # Final summary #
-        #################
+            #################
+            # Final summary #
+            #################
             with MyUI.expansion(f"Experiment Details: 【 0 Channels 】") as CM["expansion_summary"]:
                 with MyUI.row(gap=4):
                     # --- Table and Figure ---
