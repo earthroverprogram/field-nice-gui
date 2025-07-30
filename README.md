@@ -29,4 +29,4 @@ python app.py [-h] [--theme {light,dark}] [--port PORT]
 
 ## 🎛️ EVO-16 Integration
 
-To ensure **EVO-16** functions properly, please follow the setup guide in [📘 EVO-16 Manual](README_EVO16)
+To ensure **EVO-16** functions properly, please follow the setup guide in [📘 EVO-16 Manual](README_EVO16.md)
