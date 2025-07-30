@@ -381,12 +381,14 @@ def _save_session(_=None):
             "coupling": CM["select_coupling"].value,
             "repeats": int(CM["number_repeats"].value)
         },
-        "conditions": {
+        "on_site": {
             "weather": CM["select_weather"].value,
             "temperature": CM["select_temperature"].value,
+        },
+        "soil": {
+            "order": CM["select_order"].value,
             "moisture": CM["select_moisture"].value,
             "texture": CM["select_texture"].value,
-            "order": CM["select_order"].value,
             "agriculture": CM["select_agriculture"].value,
             "crop": CM["select_crop"].value,
             "cultivation": CM["select_cultivation"].value,
@@ -469,14 +471,16 @@ def _load_session(json_path, input_name):
         CM.update("number_repeats", data["source"]["repeats"])
 
         # Conditions
-        CM.update("select_weather", data["conditions"]["weather"])
-        CM.update("select_temperature", data["conditions"]["temperature"])
-        CM.update("select_moisture", data["conditions"]["moisture"])
-        CM.update("select_texture", data["conditions"]["texture"])
-        CM.update("select_order", data["conditions"]["order"])
-        CM.update("select_agriculture", data["conditions"]["agriculture"])
-        CM.update("select_crop", data["conditions"]["crop"])
-        CM.update("select_cultivation", data["conditions"]["cultivation"])
+        CM.update("select_weather", data["on_site"]["weather"])
+        CM.update("select_temperature", data["on_site"]["temperature"])
+
+        # Soil desciption
+        CM.update("select_moisture", data["soil"]["moisture"])
+        CM.update("select_texture", data["soil"]["texture"])
+        CM.update("select_order", data["soil"]["order"])
+        CM.update("select_agriculture", data["soil"]["agriculture"])
+        CM.update("select_crop", data["soil"]["crop"])
+        CM.update("select_cultivation", data["soil"]["cultivation"])
 
         # Operators
         CM.update("input_computer_op", data["operators"]["computer"])
@@ -1218,26 +1222,31 @@ def _initialize_session_ui(e):
         ###############
         # Option Card #
         ###############
-        def _create_static_options(key, show_text):
+        def _create_static_options(key, show_text, full=False):
             options = ["Unknown"] + SESSION_OPTIONS.get(key, [])
             CM[f"select_{key}"] = ui.select(
                 options,
                 label=show_text,
                 value="Unknown"
-            ).classes('flex-1')
+            ).classes('w-full' if full else "flex-1")
 
-        with MyUI.cap_card("Conditions"):
-            with MyUI.row():
-                _create_static_options("weather", "Weather Condition")
-                _create_static_options("temperature", "Air Temperature")
-                _create_static_options("moisture", "Soil Moisture")
-                _create_static_options("texture", "Soil Texture")
+        with MyUI.row():
+            with MyUI.cap_card("On-site Conditions", full=False) as card:
+                card.classes('flex-[1]')
+                _create_static_options("weather", "Weather", full=True)
+                _create_static_options("temperature", "Air Temperature", full=True)
 
-            with MyUI.row():
-                _create_static_options("order", "Soil Order")
-                _create_static_options("agriculture", "Agricultural System")
-                _create_static_options("crop", "Crop Type")
-                _create_static_options("cultivation", "Cultivation Method")
+            with MyUI.cap_card("Soil Description", full=False) as card:
+                card.classes('flex-[3]')
+                with MyUI.row():
+                    _create_static_options("order", "Soil Order")
+                    _create_static_options("moisture", "Soil Moisture")
+                    _create_static_options("texture", "Soil Texture")
+
+                with MyUI.row():
+                    _create_static_options("agriculture", "Agricultural System")
+                    _create_static_options("crop", "Crop Type")
+                    _create_static_options("cultivation", "Cultivation Method")
 
         #############
         # Operators #
@@ -1247,7 +1256,7 @@ def _initialize_session_ui(e):
                 CM["input_computer_op"] = ui.input("Computer").classes('flex-1')
                 CM["input_source_op"] = ui.input("Source").classes('flex-1')
                 CM["input_protocol_op"] = ui.input("Protocol").classes('flex-1')
-                CM["input_others_op"] = ui.input("We are just here").classes('flex-1')
+                CM["input_others_op"] = ui.input("We are just here 🤗").classes('flex-1')
 
         # --- Notes Input ---
         CM["input_notes"] = ui.input("Notes").classes('w-full')

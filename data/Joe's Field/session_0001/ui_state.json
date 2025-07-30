@@ -49,12 +49,14 @@
     "coupling": "Plate",
     "repeats": 5
   },
-  "conditions": {
+  "on_site": {
     "weather": "Unknown",
-    "temperature": "Unknown",
+    "temperature": "Unknown"
+  },
+  "soil": {
+    "order": "Unknown",
     "moisture": "Unknown",
     "texture": "Unknown",
-    "order": "Unknown",
     "agriculture": "Unknown",
     "crop": "Unknown",
     "cultivation": "Unknown"
