@@ -28,7 +28,9 @@ When EVO-16 and EVO-SP8 are connected, both must operate at the **same sampling 
 ### 🎛️ Set SR on EVO-SP8
 
 1. On the EVO-SP8 hardware, press the main knob.
-2. Navigate to **Sample Rate** and change the value to **44.1KHz**.
+2. Navigate to **Sample Rate** and change the value to **44.1KHz**. See picture below.
+
+   ![Verify SR](assets/doc/screen.png)
 
 ---
 
