@@ -432,16 +432,21 @@ def _check_save(_=None):
         CM.update("text_final", text=loc_string)
         return
 
+    # Device
     session_dict = get_session_dict()
     n_device_channels = session_dict["datalogger"]["n_channels"]
     device_channels = set(range(1, n_device_channels + 1))
+    is_device_good = len(device_channels) > 0
+
+    # Channel
     request_channels = set(session_dict["naming"].keys())
     diff = set(request_channels) - set(device_channels)
-
     is_channel_enough = len(diff) == 0
     if CM["checkbox_check_ch"]:
         is_channel_enough = is_channel_enough or not CM["checkbox_check_ch"].value
-    is_valid = CM["is_gain_valid"] and is_channel_enough
+
+    # Final valid
+    is_valid = CM["is_gain_valid"] and is_device_good and is_channel_enough
 
     # --- Save button enable/disable ---
     CM.update("button_record", props="disable", props_remove=is_valid)
@@ -452,7 +457,9 @@ def _check_save(_=None):
         reasons = []
         if not CM["is_gain_valid"]:
             reasons.append("Invalid Gain")
-        if not is_channel_enough:
+        if not is_device_good:
+            reasons.append("Invalid Device")
+        elif not is_channel_enough:
             reasons.append("Insufficient Channels")
         CM.update("text_final", text="; ".join(reasons))
     else:
