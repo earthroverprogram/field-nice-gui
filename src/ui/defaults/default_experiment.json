@@ -9,7 +9,7 @@
     "code_param": "# Only provide `param` here\nparam = {\n    \"d0\": 10.0,\n    \"gain0\": -4.0\n}\n",
     "overwrite": {}
   },
-  "pre_notes": "An experiment example.",
+  "pre_notes": "",
   "post_notes": "",
   "create_time": "2025-07-18T14:28:01"
 }
