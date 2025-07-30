@@ -185,3 +185,6 @@ cython_debug/
 
 # Data
 data
+
+# Temp file
+src/ui/temp
