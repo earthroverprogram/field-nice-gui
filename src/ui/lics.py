@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
 
+import requests
 from nicegui import ui
 
 from src.ui import GS, DATA_DIR
@@ -192,6 +193,21 @@ def _on_change_select_country(_=None):
     CM.update("number_lon", value=lon)
 
 
+def _fill_lat_lon():
+    """Find lat lon from ip"""
+    try:
+        res = requests.get('http://ip-api.com/json/').json()
+        lat = res.get('lat')
+        lon = res.get('lon')
+        if lat and lon:
+            CM["number_lat"].value = lat
+            CM["number_lon"].value = lon
+        else:
+            ui.notify('Failed to get location from IP')
+    except Exception as e:
+        ui.notify(f'Error: {e}')
+
+
 ###########################
 # MAIN UI INITIALIZATION  #
 ###########################
@@ -245,10 +261,12 @@ def initialize():
             "Latitude", value=lat,
             min=-90, max=90, step=0.01, format='%.2f'
         ).classes('flex-1')
-        CM["number_lon"] = ui.number(
-            "Longitude", value=lon,
-            min=-180, max=180, step=0.01, format='%.2f'
-        ).classes('flex-1')
+        with ui.row().classes('flex-1'):
+            CM["number_lon"] = ui.number(
+                "Longitude", value=lon,
+                min=-180, max=180, step=0.01, format='%.2f'
+            ).classes('flex-1')
+            ui.button(icon="my_location", on_click=_fill_lat_lon).classes('w-8 h-8')
         CM["number_heading"] = ui.number(
             "Heading", value=0.0,
             min=0, max=360, step=0.01, format='%.2f'
