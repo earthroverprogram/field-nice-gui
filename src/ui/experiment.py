@@ -293,7 +293,7 @@ def _refresh_summary():
 
         # Expansion
         CM["expansion_summary"].text = \
-            f"Summary Details: 【 {len(get_session_dict()['naming'])} Channels 】"
+            f"Summary: 【 {len(get_session_dict()['naming'])} Channels 】"
         # Table
         new_rows = []
         for idx, ((x, y), gain) in enumerate(
@@ -996,12 +996,22 @@ def _initialize_experiment_ui(_=None):
             ###################
             # Source Location #
             ###################
-            with MyUI.cap_card("Source Location", full=True, highlight=True):
+            with MyUI.cap_card("Source Location", full=False, highlight=True):
                 with MyUI.row():
                     CM["number_x"] = MyUI.number_int("Location X (cm)", value=-20,
                                                      on_change=_on_change_source_location, full=False)
                     CM["number_y"] = MyUI.number_int("Location Y (cm)", value=0,
                                                      on_change=_on_change_source_location, full=False)
+
+            #########
+            # Notes #
+            #########
+            with MyUI.cap_card("Notes", full=False):
+                with MyUI.row():
+                    CM["input_pre_notes"] = ui.input("Pre-notes").classes('flex-1')
+                    CM["input_post_notes"] = ui.input("Post-notes") \
+                        .classes('flex-1').props("readonly") \
+                        .on("blur", _save_post_notes)
 
         #############
         # Auto Gain #
@@ -1034,7 +1044,6 @@ def _initialize_experiment_ui(_=None):
         #################
         # Final summary #
         #################
-        with MyUI.cap_card("Summary"):
             with MyUI.expansion(f"Experiment Details: 【 0 Channels 】") as CM["expansion_summary"]:
                 with MyUI.row(gap=4):
                     # --- Table and Figure ---
@@ -1091,25 +1100,18 @@ def _initialize_experiment_ui(_=None):
                     # Figure
                     CM["figure_summary"] = ui.matplotlib(dpi=200, figsize=(4, 4)).classes("flex-[3]").figure
 
-                # Gain on device
-                with ui.row().classes("justify-content-start w-full flex-nowrap gap-10"):
-                    CM["button_gain_evo16"] = ui.button("Send Gain to EVO-16, NOW!",
-                                                        on_click=_set_preamp_gain_evo16) \
-                        .classes('text-white font-semibold h-12 w-1/4')
-                    CM["checkbox_gain_evo16"] = MyUI.checkbox(
-                        "Send Gain to EVO-16 When Starting Recording", value=True)
-                session_dict = get_session_dict()
-                valid_evo_16 = (session_dict["datalogger"]["name"] == "EVO-16" and
-                                session_dict["datalogger"]["n_channels"] > 0)
-                CM.update("button_gain_evo16", props="disable", props_remove=valid_evo_16)
-                CM.update("checkbox_gain_evo16", props="disable", props_remove=valid_evo_16)
-
-            # --- Notes ---
-            with MyUI.row():
-                CM["input_pre_notes"] = ui.input("Pre-notes").classes('flex-1')
-                CM["input_post_notes"] = ui.input("Post-notes") \
-                    .classes('flex-1').props("readonly") \
-                    .on("blur", _save_post_notes)
+            # Gain on device
+            with ui.row().classes("justify-content-start w-full flex-nowrap gap-10"):
+                CM["button_gain_evo16"] = ui.button("Send Gain to EVO-16, NOW!",
+                                                    on_click=_set_preamp_gain_evo16) \
+                    .classes('text-white font-semibold h-12 w-1/4')
+                CM["checkbox_gain_evo16"] = MyUI.checkbox(
+                    "Send Gain to EVO-16 When Starting Recording", value=True)
+            session_dict = get_session_dict()
+            valid_evo_16 = (session_dict["datalogger"]["name"] == "EVO-16" and
+                            session_dict["datalogger"]["n_channels"] > 0)
+            CM.update("button_gain_evo16", props="disable", props_remove=valid_evo_16)
+            CM.update("checkbox_gain_evo16", props="disable", props_remove=valid_evo_16)
 
         ###########
         # Actions #
