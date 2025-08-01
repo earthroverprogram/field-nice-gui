@@ -21,15 +21,19 @@ cd field-nice-gui
 pip install -r requirements.txt
 ```
 
-⚠️ **Important**:  
-NiceGUI requires **NumPy 2**, while **Pyrocko (Snuffler)** is only compatible with **NumPy 1**.  
-To use both:
+> ⚠️ **Important Notice**  
+> **NiceGUI** requires **NumPy 2**, but **Pyrocko (Snuffler)** is only compatible with **NumPy 1**.  
+> These two **cannot be installed in the same environment**.
 
-- You **must** install **Pyrocko** in a **separate conda environment** (e.g. `pip install pyrocko`).
-- If **Snuffler** is already working on your computer, you don’t need to reinstall it.
-- The UI will automatically detect your `snuffler` executable (e.g. `/opt/anaconda3/envs/some_env/bin/snuffler`).  
-  If not, you can manually specify its path in the UI.
+- If **Snuffler** is already installed on your system, you don't need to reinstall it. The UI will attempt to automatically detect the existing `snuffler` executable (e.g. `/opt/anaconda3/envs/some_env/bin/snuffler`). If auto-detection fails, you can manually specify this path in the UI.
 
+- If **Snuffler** is not yet installed, you **must install Pyrocko** in a **separate conda environment**, e.g.,
+
+  ```bash
+  conda create --name snuffler-env python=3.10
+  conda activate snuffler-env
+  pip install pyrocko
+  ```
 ---
 
 ## ▶️ Run the App
