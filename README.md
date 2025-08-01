@@ -10,8 +10,9 @@ conda create --name field-nice-gui python=3.10
 conda activate field-nice-gui
 
 # Clone the project repository from GitHub
-# If you're prompted for a password, use a GitHub Personal Access Token.
-# Generate a token at https://github.com/settings/tokens.
+# If you're prompted for a username/password, use a GitHub Personal Access Token (PAT) instead.
+# You can generate a token at: https://github.com/settings/tokens
+# Alternatively, if cloning fails, visit the repository in your browser and download the ZIP archive.
 git clone https://github.com/earthroverprogram/field-nice-gui
 
 # Change directory into the cloned project folder
