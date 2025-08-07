@@ -842,7 +842,8 @@ async def _record():
     # Set gain on EVO-16
     if CM["checkbox_gain_evo16"]:
         msg, color = await asyncio.to_thread(_set_preamp_gain_evo16)
-        ui.notify(msg, color=color)
+        if msg is not None:
+            ui.notify(msg, color=color)
 
     # Retrieve recording parameters
     session_dict = get_session_dict()
@@ -942,7 +943,7 @@ def _set_preamp_gain_evo16():
     session_dict = get_session_dict()
     if not (session_dict["datalogger"]["name"] == "EVO-16"
             and session_dict["datalogger"]["n_channels"] > 0):
-        return
+        return None, None
 
     ch_gain = {row["channel"]: row["gain"] for row in CM["table_summary"].rows}
     lines = [f"{ch} {gain:.2f} 0 0" for ch, gain in ch_gain.items()]
@@ -971,7 +972,8 @@ def _set_preamp_gain_evo16():
 def _on_click_gain_evo16_sync():
     """Synchronous UI callback to set EVO-16 gain and notify user"""
     msg, color = _set_preamp_gain_evo16()
-    ui.notify(msg, color=color)
+    if msg is not None:
+        ui.notify(msg, color=color)
 
 
 def _load_option(key, default):
