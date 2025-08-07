@@ -841,7 +841,8 @@ async def _record():
 
     # Set gain on EVO-16
     if CM["checkbox_gain_evo16"]:
-        await asyncio.to_thread(_set_preamp_gain_evo16)
+        msg, color = await asyncio.to_thread(_set_preamp_gain_evo16)
+        ui.notify(msg, color=color)
 
     # Retrieve recording parameters
     session_dict = get_session_dict()
@@ -960,11 +961,17 @@ def _set_preamp_gain_evo16():
 
         print("[EVO-16 SET] stdout:", result.stdout)
         print("[EVO-16 SET] stderr:", result.stderr)
-        ui.notify("Successfully set preamp gain on EVO-16.", color='positive')
+        return "Successfully set preamp gain on EVO-16.", "positive"
     except subprocess.CalledProcessError as e:
-        ui.notify(f"[EVO-16] Failed: {e.stderr.strip() or e}", color='warning')
+        return f"[EVO-16] Failed: {e.stderr.strip() or e}", 'warning'
     except Exception as e:
-        ui.notify(f"[EVO-16] Unexpected error: {e}", color='warning')
+        return f"[EVO-16] Unexpected error: {e}", "warning"
+
+
+def _on_click_gain_evo16_sync():
+    """Synchronous UI callback to set EVO-16 gain and notify user"""
+    msg, color = _set_preamp_gain_evo16()
+    ui.notify(msg, color=color)
 
 
 def _load_option(key, default):
@@ -1141,7 +1148,7 @@ def _initialize_experiment_ui(_=None):
             # Gain on device
             with ui.row().classes("justify-content-start w-full flex-nowrap gap-10"):
                 CM["button_gain_evo16"] = ui.button("Send Gain to EVO-16, NOW!",
-                                                    on_click=_set_preamp_gain_evo16) \
+                                                    on_click=_on_click_gain_evo16_sync) \
                     .classes('text-white font-semibold h-12 w-1/4')
                 CM["checkbox_gain_evo16"] = MyUI.checkbox(
                     "Send Gain to EVO-16 When Starting Recording",
@@ -1243,7 +1250,8 @@ def _initialize_experiment_ui(_=None):
 
                         session_dict = get_session_dict()
 
-                    with ui.row().classes('items-center').style('position: absolute; top: 0; right: 0; height: 56px; margin-right: 8px;'):
+                    with ui.row().classes('items-center').style(
+                            'position: absolute; top: 0; right: 0; height: 56px; margin-right: 8px;'):
                         CM["button_monitor"] = ui.button(
                             icon="monitor_heart",
                             on_click=monitor_device
