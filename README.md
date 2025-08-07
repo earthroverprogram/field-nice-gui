@@ -34,6 +34,7 @@ pip install -r requirements.txt
   conda create --name snuffler-env python=3.10
   conda activate snuffler-env
   pip install pyrocko
+  pip install PyQt5
   ```
 ---
 
