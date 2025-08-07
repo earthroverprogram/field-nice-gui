@@ -332,7 +332,7 @@ def _save_session(_=None):
     lics = CM["select_lics"].value
     folder = DATA_DIR / lics / name
     folder.mkdir(parents=True, exist_ok=True)
-    json_path = folder / "ui_state.json"
+    json_path = folder / "session_state.json"
 
     # --- Abort if file already exists ---
     if json_path.exists():
@@ -507,13 +507,13 @@ def _restore_for_new():
     try:
         # First, try last selection
         name = CM['last_selection']
-        json_path = DATA_DIR / lics / name / "ui_state.json"
+        json_path = DATA_DIR / lics / name / "session_state.json"
         _load_session(json_path, input_name="")
     except Exception as e:  # noqa
         try:
             # Second, try latest creation
             name = CM['select_session'].options[1]
-            json_path = DATA_DIR / lics / name / "ui_state.json"
+            json_path = DATA_DIR / lics / name / "session_state.json"
             _load_session(json_path, input_name="")
         except Exception as e:  # noqa
             # Finally, fall back to default
@@ -556,7 +556,7 @@ def _on_change_select_session(_=None):
     if not is_new:
         # Load selected
         name = CM["select_session"].value
-        json_path = DATA_DIR / lics / name / "ui_state.json"
+        json_path = DATA_DIR / lics / name / "session_state.json"
         try:
             _load_session(json_path, input_name=name)
 
@@ -566,7 +566,7 @@ def _on_change_select_session(_=None):
             ui.notify(f'Failed to load/parse "{json_path}": {e}', color='negative')
 
             # Update options and selection
-            session_options = ["<NEW>"] + get_existing_sorted(DATA_DIR / lics)
+            session_options = ["<NEW>"] + get_existing_sorted(DATA_DIR / lics, "session")
             CM.update("select_session", "<NEW>", options=session_options)
         # Input name
         if not CM["input_name"].validate():
@@ -978,7 +978,7 @@ def _initialize_session_ui(e):
 
         # --- Selection ---
         with MyUI.row():
-            existing_sessions = get_existing_sorted(DATA_DIR / lics)
+            existing_sessions = get_existing_sorted(DATA_DIR / lics, "session")
             sessions_options = ["<NEW>"] + existing_sessions
 
             # Selection

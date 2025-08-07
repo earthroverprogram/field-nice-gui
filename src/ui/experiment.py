@@ -405,7 +405,7 @@ def _get_existing_experiments_sorted(session_path):
             if not match:
                 continue
             try:
-                json_path = d / "ui_state.json"
+                json_path = d / "experiment_state.json"
                 with open(json_path, "r", encoding="utf-8") as fs:
                     _ = json.load(fs)
                 number = int(match.group(1))
@@ -487,7 +487,7 @@ def _save_experiment_meta():
     """Save current experiment meta."""
     number, folder = _get_experiment_folder()
     folder.mkdir(parents=True, exist_ok=True)
-    json_path = folder / "ui_state.json"
+    json_path = folder / "experiment_state.json"
 
     # --- Abort if file already exists ---
     if json_path.exists():
@@ -528,7 +528,7 @@ def _save_experiment_meta():
 def _save_post_notes():
     """Update post notes."""
     number, folder = _get_experiment_folder()
-    json_path = folder / "ui_state.json"
+    json_path = folder / "experiment_state.json"
     try:
         # Load
         with open(json_path, "r") as fs:
@@ -583,13 +583,13 @@ def _restore_for_new():
     session_folder = folder.parent
     try:
         # First, try previous
-        json_path = session_folder / _number_to_dir(current_number - 1) / "ui_state.json"
+        json_path = session_folder / _number_to_dir(current_number - 1) / "experiment_state.json"
         _load_experiment(json_path, experiment_number=current_number, post_notes=False)
         from_previous = True
     except Exception as e:  # noqa
         try:
             # First, try last
-            json_path = session_folder / _number_to_dir(CM["last_selection"]) / "ui_state.json"
+            json_path = session_folder / _number_to_dir(CM["last_selection"]) / "experiment_state.json"
             _load_experiment(json_path, experiment_number=current_number, post_notes=False)
             from_previous = False
         except Exception as e:  # noqa
@@ -640,7 +640,7 @@ def _on_change_experiment_number(_=None):
     _, folder = _get_experiment_folder()
     if not is_new:
         # Load selected
-        json_path = folder / "ui_state.json"
+        json_path = folder / "experiment_state.json"
         try:
             _load_experiment(json_path, experiment_number=number)
         except Exception as e:  # noqa

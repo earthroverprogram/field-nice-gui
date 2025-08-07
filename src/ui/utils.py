@@ -98,17 +98,17 @@ class CountryUtils:
         return 0.0, 0.0
 
 
-def get_existing_sorted(directory: Path):
+def get_existing_sorted(directory: Path, prefix: str):
     """
     Return a list of subfolder names under the given directory,
-    sorted by 'create_time' field from each subfolder's ui_state.json (descending).
+    sorted by 'create_time' field from each subfolder's prefix_state.json (descending).
     """
     entries = []
 
     for subdir in directory.iterdir():
         if not subdir.is_dir():
             continue
-        json_path = subdir / "ui_state.json"
+        json_path = subdir / f"{prefix}_state.json"
         try:
             with open(json_path, "r", encoding="utf-8") as f:
                 meta = json.load(f)
@@ -118,7 +118,7 @@ def get_existing_sorted(directory: Path):
             create_time = datetime.strptime(create_time_str, "%Y-%m-%dT%H:%M:%S")
             entries.append((subdir.name, create_time))
         except:  # noqa
-            continue  # Skip folders with missing or invalid ui_state.json
+            continue  # Skip folders with missing or invalid prefix_state.json
 
     entries.sort(key=lambda x: x[1], reverse=True)
     return [name for name, _ in entries]

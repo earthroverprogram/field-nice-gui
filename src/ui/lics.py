@@ -52,7 +52,7 @@ def _save_lics(_=None):
     name = CM["input_name"].value.strip()
     folder = DATA_DIR / name
     folder.mkdir(parents=True, exist_ok=True)
-    json_path = folder / "ui_state.json"
+    json_path = folder / "lics_state.json"
 
     # --- Abort if file already exists ---
     if json_path.exists():
@@ -114,13 +114,13 @@ def _restore_for_new():
     try:
         # First, try last selection
         name = CM['last_selection']
-        json_path = DATA_DIR / f"{name}" / "ui_state.json"
+        json_path = DATA_DIR / f"{name}" / "lics_state.json"
         _load_lics(json_path, name="")
     except Exception as e:  # noqa
         try:
             # Second, try latest creation
             name = CM['select_lics'].options[1]
-            json_path = DATA_DIR / f"{name}" / "ui_state.json"
+            json_path = DATA_DIR / f"{name}" / "lics_state.json"
             _load_lics(json_path, name="")
         except Exception as e:  # noqa
             # Finally, fall back to default
@@ -156,7 +156,7 @@ def _on_change_select_lics(_=None):
     # 3. If loading existing LICS, populate fields from saved data
     if not is_new:
         name = CM["select_lics"].value
-        json_path = DATA_DIR / name / "ui_state.json"
+        json_path = DATA_DIR / name / "lics_state.json"
         try:
             _load_lics(json_path)
 
@@ -166,7 +166,7 @@ def _on_change_select_lics(_=None):
             ui.notify(f'Failed to load/parse "{json_path}": {e}', color='negative')
 
             # Update options and selection
-            lics_options = ["<NEW>"] + get_existing_sorted(DATA_DIR)
+            lics_options = ["<NEW>"] + get_existing_sorted(DATA_DIR, "lics")
             CM.update("select_lics", "<NEW>", options=lics_options)
     else:
         # Load previous with fallback: last selection -> latest creation -> default
@@ -219,7 +219,7 @@ def initialize():
     # ui.label("Define LICS").classes('text-3xl font-bold')
 
     # --- Selection ---
-    lics_options = ["<NEW>"] + get_existing_sorted(DATA_DIR)
+    lics_options = ["<NEW>"] + get_existing_sorted(DATA_DIR, "lics")
     CM["select_lics"] = ui.select(
         lics_options,
         value="<NEW>",
