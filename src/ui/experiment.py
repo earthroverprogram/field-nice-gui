@@ -4,7 +4,6 @@ import os
 import re
 import time
 import warnings
-from datetime import datetime
 from types import SimpleNamespace
 
 import matplotlib
@@ -483,7 +482,7 @@ def _get_experiment_folder():
     return number, folder
 
 
-def _save_experiment_meta():
+def _save_experiment_meta(now):
     """Save current experiment meta."""
     number, folder = _get_experiment_folder()
     folder.mkdir(parents=True, exist_ok=True)
@@ -511,7 +510,7 @@ def _save_experiment_meta():
         },
         "pre_notes": CM["input_pre_notes"].value.strip(),
         "post_notes": CM["input_post_notes"].value.strip(),
-        "create_time": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        "create_time": now.strftime("%Y-%m-%dT%H:%M:%S")
     }
 
     # --- Write to JSON file ---
@@ -679,7 +678,8 @@ def _view_in_snuffler(_=None):
     """Launch the Snuffler tool to view the corresponding .mseed file."""
     # Get experiment number and construct the expected mseed file path
     number, folder = _get_experiment_folder()
-    mseed_path = folder.parent / f"experiment_{number:04d}/data.mseed"
+    out_path = folder.parent / f"experiment_{number:04d}"
+    mseed_path = out_path / "data.mseed"
 
     # Ensure the .mseed file exists before launching Snuffler
     if not mseed_path.exists():
@@ -695,7 +695,10 @@ def _view_in_snuffler(_=None):
     try:
         # Launch Snuffler as a background process, redirecting stderr to temp file
         subprocess.Popen(
-            [snuffler_path, str(mseed_path)],
+            [snuffler_path, str(mseed_path),
+             f'--event={str(out_path / "snuffler_meta/EVENT.txt")}',
+             f'--stations={str(out_path / "snuffler_meta/STATIONS.txt")}'
+             ],
             stdout=subprocess.DEVNULL,
             stderr=open(stderr_path, 'w'),
         )
@@ -735,7 +738,8 @@ def _save_data(data: np.ndarray):
     """
 
     # Step 1: Save experiment meta
-    if not _save_experiment_meta():
+    now = UTCDateTime.now()
+    if not _save_experiment_meta(now):
         ui.notify("Failed to save experiment meta. Data saving also skipped.", color='negative')
         return
 
@@ -748,8 +752,6 @@ def _save_data(data: np.ndarray):
     session_dict = get_session_dict()
     naming_dict = session_dict["naming"]
     samplerate = session_dict["datalogger"]["samplerate"]
-
-    now = UTCDateTime.now()
     for ch_index, (logical_ch, naming) in enumerate(naming_dict.items()):
         if ch_index >= data.shape[1]:
             ui.notify(f"Channel mismatch: not enough data columns for {logical_ch}", color='negative')
@@ -757,7 +759,7 @@ def _save_data(data: np.ndarray):
         network, station, channel = naming.split(".")
         trace = Trace(data[:, ch_index].copy(), header={
             "sampling_rate": samplerate,
-            "starttime": now,
+            "starttime": now.replace(microsecond=0),
             "network": network,
             "station": station,
             "channel": channel,
@@ -808,6 +810,27 @@ def _save_data(data: np.ndarray):
         plt.style.use('dark_background' if GS.dark_mode else 'default')  # Restore plot theme
     except Exception as e:
         ui.notify(f"Failed to save preview image: {e}", color='negative')
+
+    # Step 6: Save snuffler meta
+    try:
+        snuffler_dir = folder / "snuffler_meta"
+        snuffler_dir.mkdir(exist_ok=True)
+
+        event_path = snuffler_dir / "EVENT.txt"
+        with open(event_path, "w") as fs:
+            fs.write(f"name = {CM['text_final'].text}\n")
+            fs.write(f"time = {now.strftime('%Y-%m-%d %H:%M:%S')}\n")
+            fs.write(f"latitude = {int(CM['number_y'].value)}\n")
+            fs.write(f"longitude = {int(CM['number_x'].value)}\n")
+            fs.write("catalog = Maria's Simple Loc\n")
+
+        stations = [
+            [naming, str(row["y"]), str(row["x"]), "0", "0"]
+            for row, naming in zip(CM["table_summary"].rows, naming_dict.values())
+        ]
+        np.savetxt(snuffler_dir / "STATIONS.txt", stations, fmt="%s")
+    except Exception as e:
+        ui.notify(f"Failed to save snuffler meta: {e}", color='negative')
 
 
 async def _record():
