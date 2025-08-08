@@ -817,18 +817,24 @@ def _save_data(data: np.ndarray):
         snuffler_dir.mkdir(exist_ok=True)
 
         event_path = snuffler_dir / "EVENT.txt"
+        M_TO_DEG = 1 / 111000  # In snuffler, user will see "m" but understand as "cm"
+
         with open(event_path, "w") as fs:
             fs.write(f"name = {CM['text_final'].text}\n")
             fs.write(f"time = {now.strftime('%Y-%m-%d %H:%M:%S')}\n")
-            fs.write(f"latitude = {int(CM['number_y'].value)}\n")
-            fs.write(f"longitude = {int(CM['number_x'].value)}\n")
+            fs.write(f"latitude = {float(CM['number_y'].value) * M_TO_DEG:.12f}\n")
+            fs.write(f"longitude = {float(CM['number_x'].value) * M_TO_DEG:.12f}\n")
             fs.write("catalog = Maria's Simple Loc\n")
 
         stations = [
-            [naming, str(row["y"]), str(row["x"]), "0", "0"]
+            [naming,
+             f"{float(row['y']) * M_TO_DEG:.12f}",
+             f"{float(row['x']) * M_TO_DEG:.12f}",
+             "0", "0"]
             for row, naming in zip(CM["table_summary"].rows, naming_dict.values())
         ]
         np.savetxt(snuffler_dir / "STATIONS.txt", stations, fmt="%s")
+
     except Exception as e:
         ui.notify(f"Failed to save snuffler meta: {e}", color='negative')
 
