@@ -47,17 +47,31 @@ def _check_save(_=None):
         CM.update("text_warn", classes="hidden")
 
 
-def _save_lics(_=None):
+async def _save_lics(_=None):
     """Save current LICS and update selection."""
     name = CM["input_name"].value.strip()
     folder = DATA_DIR / name
     folder.mkdir(parents=True, exist_ok=True)
     json_path = folder / "lics_state.json"
 
-    # --- Abort if file already exists ---
+    # --- Abort if file already exists and folder contains any subfolders ---
     if json_path.exists():
-        ui.notify(f'LICS "{name}" already exists. Save aborted.', color='negative')
-        return
+        if any(p.is_dir() for p in folder.iterdir()):
+            ui.notify(f'LICS "{name}" already exists and contains Sessions. Save aborted.',
+                      color='negative')
+            return
+
+        # Ask for confirmation to overwrite
+        dlg = ui.dialog().props('persistent')
+        with dlg, ui.card():
+            ui.label(f'⚠️ LICS "{name}" already exists but contains no Session. Overwrite it?')
+            with ui.row().classes('w-full justify-end'):
+                ui.button('No', on_click=lambda: dlg.submit(False)).classes("flex-1")
+                ui.button('Yes, overwrite', color='negative',
+                          on_click=lambda: dlg.submit(True)).classes("flex-1")
+        dlg.open()
+        if not await dlg:
+            return
 
     # --- Construct data dictionary ---
     data = {
@@ -87,8 +101,9 @@ def _save_lics(_=None):
 
     # --- Add new LICS to dropdown options ---
     options = CM["select_lics"].options
-    CM.update("select_lics", name,
-              options=["<NEW>"] + [name] + options[1:])
+    if name not in options:
+        CM.update("select_lics", options=["<NEW>"] + [name] + options[1:])
+    CM.update("select_lics", value=name)
 
 
 def _load_lics(json_path, name=None):

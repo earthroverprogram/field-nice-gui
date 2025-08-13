@@ -328,7 +328,7 @@ def _check_save(_=None):
         CM.update("text_warn", classes="hidden")
 
 
-def _save_session(_=None):
+async def _save_session(_=None):
     """Save current session and update selection."""
     _on_blur_name()
     name = CM["input_name"].value.strip()
@@ -337,10 +337,24 @@ def _save_session(_=None):
     folder.mkdir(parents=True, exist_ok=True)
     json_path = folder / "session_state.json"
 
-    # --- Abort if file already exists ---
+    # --- Abort if file already exists and folder contains any subfolders ---
     if json_path.exists():
-        ui.notify(f'Session "{name}" already exists. Save aborted.', color='negative')
-        return
+        if any(p.is_dir() for p in folder.iterdir()):
+            ui.notify(f'Session "{name}" already exists and contains Experiments. Save aborted.',
+                      color='negative')
+            return
+
+        # Ask for confirmation to overwrite
+        dlg = ui.dialog().props('persistent')
+        with dlg, ui.card():
+            ui.label(f'⚠️ Session "{name}" already exists but contains no Experiment. Overwrite it?')
+            with ui.row().classes('w-full justify-end'):
+                ui.button('No', on_click=lambda: dlg.submit(False)).classes("flex-1")
+                ui.button('Yes, overwrite', color='negative',
+                          on_click=lambda: dlg.submit(True)).classes("flex-1")
+        dlg.open()
+        if not await dlg:
+            return
 
     # --- Construct data dictionary ---
     data = {
@@ -418,8 +432,9 @@ def _save_session(_=None):
 
     # --- Add new LICS to dropdown options ---
     options = CM["select_session"].options
-    CM.update("select_session", name,
-              options=["<NEW>"] + [name] + options[1:])
+    if name not in options:
+        CM.update("select_session", options=["<NEW>"] + [name] + options[1:])
+    CM.update("select_session", value=name)
 
 
 def _load_session(json_path, input_name):
