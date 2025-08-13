@@ -317,17 +317,15 @@ class ThreeImageViewer:
 
 def _detect_snuffler():
     """
-    Robustly detect the full path to the 'snuffler' executable.
-    Strategy:
-    1. Check if 'snuffler' is in system PATH using `shutil.which()`
-    2. Search in known Anaconda/Mambaforge base directories
-    3. Search all conda environments under ~/anaconda3/envs/** or ~/.conda/envs/**
-    4. Return full path if found, otherwise fallback to 'snuffler'
+    Cross-platform detection of Snuffler executable.
     """
     # Step 1: Try system PATH
     path = shutil.which("snuffler")
     if path:
         return path
+
+    # Pick executable name based on platform
+    exe_name = "snuffler.exe" if os.name == "nt" else "snuffler"
 
     # Step 2: Check common conda base locations
     candidate_dirs = [
@@ -341,7 +339,10 @@ def _detect_snuffler():
         envs_dir = base / "envs"
         if envs_dir.exists():
             for env in envs_dir.iterdir():
-                snuffler_path = env / "bin" / "snuffler"
+                if os.name == "nt":
+                    snuffler_path = env / "Scripts" / exe_name
+                else:
+                    snuffler_path = env / "bin" / exe_name
                 if snuffler_path.exists() and os.access(snuffler_path, os.X_OK):
                     return str(snuffler_path)
 
@@ -349,9 +350,12 @@ def _detect_snuffler():
     user_envs = Path.home() / ".conda" / "envs"
     if user_envs.exists():
         for env in user_envs.iterdir():
-            snuffler_path = env / "bin" / "snuffler"
+            if os.name == "nt":
+                snuffler_path = env / "Scripts" / exe_name
+            else:
+                snuffler_path = env / "bin" / exe_name
             if snuffler_path.exists() and os.access(snuffler_path, os.X_OK):
                 return str(snuffler_path)
 
     # Step 4: Fallback
-    return "snuffler"
+    return exe_name
