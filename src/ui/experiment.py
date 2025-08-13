@@ -233,12 +233,15 @@ def _plot_summary(fig, layout_dict):
     # --- Plotting ---
     ax = fig.gca()
     ax.grid(True, color=MyUI.gray_color(), linewidth=0.5)
-    ax.scatter(layout[:, 0], layout[:, 1], s=40, color=colors, zorder=10)
+    ax.scatter(layout[:, 0], layout[:, 1], s=80, color=colors, zorder=10)
+    for i, (x, y) in enumerate(layout):
+        ax.text(x, y, s=str(i + 1), color=MyUI.bg_color(), ha="center", va="center", zorder=100,
+                fontdict={"size": 7, "fontname": "Times New Roman"})
     ax.scatter(src_xy[0], src_xy[1], s=80, color='red', marker="*", zorder=20)
     if st_dict:
         gain = st_dict["gain"]
         color = bypass_color if gain is None else cmap(norm(gain))
-        ax.scatter(st_dict["x"], st_dict["y"], s=30, color=color, marker="D", zorder=10)
+        ax.scatter(st_dict["x"], st_dict["y"], s=40, color=color, marker="D", zorder=10)
 
     # --- Colorbar on top ---
     sm = ScalarMappable(norm=norm, cmap=cmap)
