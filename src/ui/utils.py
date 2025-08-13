@@ -242,7 +242,7 @@ class MyUI:
             value=value,
             min=min,
             max=max,
-            on_change=on_change,
+            on_change=(lambda e: (_round_to_int(e), on_change and on_change(e))[1]),
         ).on('blur', _round_to_int) \
             .classes('w-full' if full else 'flex-1')
 
