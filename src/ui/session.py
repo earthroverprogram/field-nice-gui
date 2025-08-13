@@ -123,7 +123,7 @@ def _plot_layout(fig, layout):
     ax.scatter(layout[:, 0], layout[:, 1], s=80, color=MyUI.primary_color(), zorder=10)
     for i, (x, y) in enumerate(layout):
         ax.text(x, y, s=str(i + 1), color=MyUI.bg_color(), ha="center", va="center", zorder=100,
-                fontdict={"size": 7, "fontname": "Times New Roman"})
+                fontdict={"size": 7, "fontname": "Times New Roman", "weight": "bold"})
     MyPlot.apply_margin(fig, layout)
     fig.tight_layout(pad=0)
     MyPlot.apply_dark(fig)

@@ -236,7 +236,7 @@ def _plot_summary(fig, layout_dict):
     ax.scatter(layout[:, 0], layout[:, 1], s=80, color=colors, zorder=10)
     for i, (x, y) in enumerate(layout):
         ax.text(x, y, s=str(i + 1), color=MyUI.bg_color(), ha="center", va="center", zorder=100,
-                fontdict={"size": 7, "fontname": "Times New Roman"})
+                fontdict={"size": 7, "fontname": "Times New Roman", "weight": "bold"})
     ax.scatter(src_xy[0], src_xy[1], s=80, color='red', marker="*", zorder=20)
     if st_dict:
         gain = st_dict["gain"]
