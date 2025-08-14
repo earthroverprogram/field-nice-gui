@@ -116,5 +116,5 @@ ui.run(
     dark=GS.dark_mode,
     native=args.native,
     reconnect_timeout=30,
-    window_size=(1200, 800)
+    window_size=(1200, 800) if args.native else None
 )
