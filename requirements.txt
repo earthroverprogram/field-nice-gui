@@ -8,3 +8,4 @@ pyyaml~=6.0.2
 obspy~=1.4.2
 sounddevice~=0.5.2
 python-osc~=1.9.3
+pywebview~=6.0

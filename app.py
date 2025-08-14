@@ -16,9 +16,10 @@ from src.ui.utils import MyUI
 # ------------------------
 # Parse command-line args
 # ------------------------
-parser = argparse.ArgumentParser(description="Run NiceGUI app with custom theme and port.")
+parser = argparse.ArgumentParser(description="Run FieldUI.")
 parser.add_argument('--theme', choices=['light', 'dark'], default='light', help='UI theme mode')
 parser.add_argument('--port', type=int, default=8080, help='Port to run the app on')
+parser.add_argument('--native', action="store_true", help='Run in native mode (no browser)')
 args = parser.parse_args()
 
 # ------------------------
@@ -112,5 +113,8 @@ ui.run(
     title="Field UI",
     port=args.port,
     favicon=f'data:image/jpeg;base64,{favicon_base64}',
-    dark=GS.dark_mode
+    dark=GS.dark_mode,
+    native=args.native,
+    reconnect_timeout=30,
+    window_size=(1200, 800)
 )

@@ -48,8 +48,16 @@ python app.py
 
 Full CLI options:
 
-```bash
-python app.py [-h] [--theme {light,dark}] [--port PORT]
+```
+usage: app.py [-h] [--theme {light,dark}] [--port PORT] [--native]
+
+Run FieldUI.
+
+options:
+  -h, --help            show this help message and exit
+  --theme {light,dark}  UI theme mode
+  --port PORT           Port to run the app on
+  --native              Run in native mode (no browser)
 ```
 
 ---
