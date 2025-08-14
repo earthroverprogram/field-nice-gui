@@ -5,21 +5,10 @@ import numpy as np
 import sounddevice as sd
 
 STATIC_DEVICE_MAP = {
-    "Built-in Mic": lambda phys_name: any(
-        known_phys.lower() in phys_name.lower()
-        for known_phys in [
-            "MacBook Air Microphone",
-            "MacBook Pro Microphone",
-            "iMac Microphone",
-            "Internal Microphone",
-            "Built-in Microphone",
-            "MacBook Microphone"
-        ]
-    ),
+    "Dummy": lambda phys_name: phys_name == "Dummy",
     "EVO-16": lambda phys_name: "evo" in phys_name.lower() and "16" in phys_name.lower(),
     "Scarlett-2i2": lambda phys_name: "scarlett" in phys_name.lower() and "2i2" in phys_name.lower(),
-    "Digiface": lambda phys_name: "digiface" in phys_name.lower(),
-    "Dummy": lambda phys_name: phys_name == "Dummy"
+    "Digiface": lambda phys_name: "digiface" in phys_name.lower()
 }
 
 DUMMY_CHANNELS = 32
@@ -80,6 +69,7 @@ class Datalogger:
 
         # Match logical names
         result = {}
+        matched_physical_devices = []
         for logical_name, matcher in (STATIC_DEVICE_MAP.items()):
             matched = [phys_name for phys_name in phys_devices if matcher(phys_name)]
             if len(matched) == 1:
@@ -88,11 +78,20 @@ class Datalogger:
                     "physical_name": matched[0],
                     "n_chs": phys_devices[matched[0]]
                 }
+                matched_physical_devices.append(matched[0])
             else:
                 # No match or more than one matches: discard
                 result[logical_name] = {
                     "physical_name": "",
                     "n_chs": 0
+                }
+
+        # Add unmatched physical devices
+        for ph in phys_devices:
+            if ph not in matched_physical_devices:
+                result[ph] = {
+                    "physical_name": ph,
+                    "n_chs": phys_devices[ph]
                 }
         return result
 
