@@ -46,11 +46,24 @@ class Datalogger:
             sd._initialize()  # noqa
         except:  # noqa
             pass
+
+        # Query from sd
         devices = sd.query_devices()
-        phys_devices = {
-            dev["name"]: dev["max_input_channels"]
-            for dev in devices if dev["max_input_channels"] > 0
-        }
+        phys_devices = {}
+        for idx, dev in enumerate(devices):
+            if dev["max_input_channels"] > 0:
+                name = dev["name"]
+                if name == "Dummy":
+                    continue  # we'll add Dummy later
+                try:
+                    # quick open test
+                    with sd.InputStream(device=name, channels=1, samplerate=44100, blocksize=64):
+                        sd.sleep(10)  # short test, ms
+                    phys_devices[name] = dev["max_input_channels"]
+                except:  # noqa
+                    # skip unusable device
+                    continue
+
         # Add Dummy
         phys_devices["Dummy"] = DUMMY_CHANNELS
         return phys_devices
