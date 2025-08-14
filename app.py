@@ -19,7 +19,7 @@ from src.ui.utils import MyUI
 parser = argparse.ArgumentParser(description="Run FieldUI.")
 parser.add_argument('--theme', choices=['light', 'dark'], default='light', help='UI theme mode')
 parser.add_argument('--port', type=int, default=8080, help='Port to run the app on')
-parser.add_argument('--native', action="store_true", help='Run in native mode (no browser)')
+parser.add_argument('--browser', action="store_true", help='Run in browser rather than native')
 args = parser.parse_args()
 
 # ------------------------
@@ -109,12 +109,13 @@ with open('assets/erp.jpeg', 'rb') as f:
 # ------------------------
 # Run app
 # ------------------------
+native = not args.browser
 ui.run(
     title="Field UI",
     port=args.port,
     favicon=f'data:image/jpeg;base64,{favicon_base64}',
     dark=GS.dark_mode,
-    native=args.native,
     reconnect_timeout=30,
-    window_size=(1200, 800) if args.native else None
+    native=native,
+    window_size=(1200, 800) if native else None
 )
