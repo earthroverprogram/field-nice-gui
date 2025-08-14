@@ -737,7 +737,7 @@ def _logger_name2value(name):
 
 def _logger_value2name(value):
     """Extract name from select option."""
-    return value.split("【")[0].strip()
+    return value.split("  【")[0]
 
 
 def _get_selected_device_nch():
