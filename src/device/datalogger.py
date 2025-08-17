@@ -1,3 +1,8 @@
+import os
+
+# Set ASIO environment variable before importing sounddevice
+os.environ["SD_ENABLE_ASIO"] = "1"
+
 import threading
 import time
 
@@ -5,10 +10,17 @@ import numpy as np
 import sounddevice as sd
 
 STATIC_DEVICE_MAP = {
-    "Dummy": lambda phys_name: phys_name == "Dummy",
-    "EVO-16": lambda phys_name: "evo" in phys_name.lower() and "16" in phys_name.lower(),
-    "Scarlett-2i2": lambda phys_name: "scarlett" in phys_name.lower() and "2i2" in phys_name.lower(),
-    "Digiface": lambda phys_name: "digiface" in phys_name.lower()
+    "Dummy": lambda phys_name, api_name: phys_name == "Dummy",
+
+    "EVO-16": lambda phys_name, api_name:
+    ("evo16" in phys_name.lower() and "core audio" in api_name.lower()) or
+    ("audient usb" in phys_name.lower() and "asio" in api_name.lower()),
+
+    "Scarlett-2i2": lambda phys_name, api_name:
+    "scarlett 2i2" in phys_name.lower() and "core audio" in api_name.lower(),
+
+    "Digiface": lambda phys_name, api_name:
+    "digiface" in phys_name.lower() and "core audio" in api_name.lower()
 }
 
 DUMMY_CHANNELS = 32
@@ -34,10 +46,42 @@ class Datalogger:
         self.stop_streaming()
 
     @staticmethod
+    def _get_preferred_hostapis():
+        """
+        Return list of preferred host API names in priority order.
+        - Core Audio (macOS)
+        - WASAPI, ASIO (Windows)
+        - ALSA (Linux)
+        """
+        apis = sd.query_hostapis()
+
+        # macOS
+        for api in apis:
+            if 'core audio' in api['name'].lower():
+                return [api['name']]
+
+        # Windows
+        preferred = []
+        for api in apis:
+            if 'asio' in api['name'].lower() or "wasapi" in api['name'].lower():
+                preferred.append(api['name'])
+
+        if preferred:
+            return preferred
+
+        # Linux fallback
+        for api in apis:
+            if 'alsa' in api['name'].lower():
+                return [api['name']]
+
+        return []
+
+    @staticmethod
     def get_physical_devices():
         """
         Return a dict of available physical devices.
-        Format: {physical_name: num_input_channels}
+        Format: {device_key: {physical_index, physical_name, api_name, n_chs}}
+        Only considers preferred host APIs to avoid duplicates.
         """
         # Detection
         try:
@@ -47,35 +91,66 @@ class Datalogger:
         except:  # noqa
             pass
 
+        # Get preferred host APIs
+        preferred_apis = Datalogger._get_preferred_hostapis()
+        if not preferred_apis:
+            print("Warning: No preferred host APIs found")
+            return {}
+
         # Query from sd
         devices = sd.query_devices()
+        apis = sd.query_hostapis()
+
         phys_devices = {}
         for idx, dev in enumerate(devices):
             if dev["max_input_channels"] > 0:
+                # Get the host API name for this device
+                api_index = dev['hostapi']
+                api_name = apis[api_index]['name'] if api_index < len(apis) else 'Unknown'
+
+                # Skip if not in preferred APIs
+                if api_name not in preferred_apis:
+                    continue
+
                 name = dev["name"]
                 if name == "Dummy":
                     continue  # we'll add Dummy later
+
                 try:
-                    # quick open test
-                    with sd.InputStream(device=name, channels=1, samplerate=44100, blocksize=64):
+                    # Quick open test
+                    with sd.InputStream(device=idx, channels=1, samplerate=44100, blocksize=64):
                         sd.sleep(10)  # short test, ms
-                    phys_devices[name] = dev["max_input_channels"]
+
+                    # Create unique key: {device_name}_{api_name}
+                    device_key = f"{name}_{api_name}"
+                    phys_devices[device_key] = {
+                        "physical_index": idx,
+                        "physical_name": name,
+                        "api_name": api_name,
+                        "n_chs": dev["max_input_channels"]
+                    }
                 except:  # noqa
                     # skip unusable device
                     continue
 
         # Add Dummy
-        phys_devices["Dummy"] = DUMMY_CHANNELS
+        phys_devices["Dummy"] = {
+            "physical_index": -1,  # Special index for dummy
+            "physical_name": "Dummy",
+            "api_name": "Dummy",
+            "n_chs": DUMMY_CHANNELS
+        }
+
         return phys_devices
 
     @staticmethod
     def get_logical_devices():
         """
         Return a dict of available input devices using STATIC_DEVICE_MAP.
-        Format: {logical_name: num_input_channels}
+        Format: {logical_name: {physical_index, physical_name, api_name, n_chs}}
         Matching logic:
-          - exactly one match → bind and return real channel count
-          - zero or multiple matches → return 0
+          - exactly one match → bind and return real info
+          - zero or multiple matches → return empty info
         """
         # Get available devices
         phys_devices = Datalogger.get_physical_devices()
@@ -83,29 +158,32 @@ class Datalogger:
         # Match logical names
         result = {}
         matched_physical_devices = []
-        for logical_name, matcher in (STATIC_DEVICE_MAP.items()):
-            matched = [phys_name for phys_name in phys_devices if matcher(phys_name)]
+
+        for logical_name, matcher in STATIC_DEVICE_MAP.items():
+            # Match against both physical_name and api_name
+            matched = [key for key, info in phys_devices.items()
+                       if matcher(info["physical_name"], info["api_name"])]
+
             if len(matched) == 1:
                 # Exact match
-                result[logical_name] = {
-                    "physical_name": matched[0],
-                    "n_chs": phys_devices[matched[0]]
-                }
-                matched_physical_devices.append(matched[0])
+                device_key = matched[0]
+                result[logical_name] = phys_devices[device_key].copy()
+                matched_physical_devices.append(device_key)
             else:
                 # No match or more than one matches: discard
                 result[logical_name] = {
+                    "physical_index": -1,
                     "physical_name": "",
+                    "api_name": "",
                     "n_chs": 0
                 }
 
         # Add unmatched physical devices
-        for ph in phys_devices:
-            if ph not in matched_physical_devices:
-                result[ph] = {
-                    "physical_name": ph,
-                    "n_chs": phys_devices[ph]
-                }
+        for device_key, device_info in phys_devices.items():
+            if device_key not in matched_physical_devices:
+                # Use the device_key as the logical name for unmatched devices
+                result[device_key] = device_info.copy()
+
         return result
 
     def _start_streaming_dummy(self, datatype, samplerate, mode, on_data=None):
@@ -168,8 +246,10 @@ class Datalogger:
         if not info or not info["physical_name"] or info["n_chs"] == 0:
             raise ValueError(f"Logical device '{logical_name}' not mapped to any physical device.")
 
+        physical_index = info["physical_index"]
         physical_name = info["physical_name"]
         max_channels = info["n_chs"]
+
         self.invalid_channels = [ch for ch in self.active_channels if ch >= max_channels]
 
         if self.invalid_channels:
@@ -193,10 +273,13 @@ class Datalogger:
             elif self.mode == 'monitor' and self.on_data:
                 self.on_data(selected)
 
+        # Use physical_index instead of physical_name to avoid ambiguity
+        device_param = physical_index if physical_index >= 0 else physical_name
+
         self.stream = sd.InputStream(
             samplerate=samplerate,
             channels=max(self.active_channels) + 1 if self.active_channels else 1,
-            device=physical_name,
+            device=device_param,
             callback=callback,
             dtype=datatype
         )
