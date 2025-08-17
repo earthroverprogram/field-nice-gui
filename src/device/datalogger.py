@@ -24,6 +24,7 @@ STATIC_DEVICE_MAP = {
 }
 
 DUMMY_CHANNELS = 32
+DUMMY_SR = 44100
 
 
 class Datalogger:
@@ -48,9 +49,9 @@ class Datalogger:
     @staticmethod
     def _get_preferred_hostapis():
         """
-        Return list of preferred host API names in priority order.
+        Return list of preferred host API names
         - Core Audio (macOS)
-        - WASAPI, ASIO (Windows)
+        - ASIO (Windows) -- for best compatibility, we keep the minimum
         - ALSA (Linux)
         """
         apis = sd.query_hostapis()
@@ -61,15 +62,11 @@ class Datalogger:
                 return [api['name']]
 
         # Windows
-        preferred = []
         for api in apis:
-            if 'asio' in api['name'].lower() or "wasapi" in api['name'].lower():
-                preferred.append(api['name'])
+            if 'asio' in api['name'].lower():
+                return [api['name']]
 
-        if preferred:
-            return preferred
-
-        # Linux fallback
+        # Linux
         for api in apis:
             if 'alsa' in api['name'].lower():
                 return [api['name']]
@@ -118,8 +115,10 @@ class Datalogger:
 
                 try:
                     # Quick open test
-                    with sd.InputStream(device=idx, channels=1, samplerate=44100, blocksize=64):
-                        sd.sleep(10)  # short test, ms
+                    with sd.InputStream(device=idx, channels=1,
+                                        samplerate=dev["default_samplerate"], dtype="float32",
+                                        blocksize=64):
+                        sd.sleep(20)  # short test, ms
 
                     # Create unique key: {device_name}_{api_name}
                     device_key = f"{name}_{api_name}"
@@ -127,7 +126,8 @@ class Datalogger:
                         "physical_index": idx,
                         "physical_name": name,
                         "api_name": api_name,
-                        "n_chs": dev["max_input_channels"]
+                        "n_chs": dev["max_input_channels"],
+                        "default_sr": dev["default_samplerate"]
                     }
                 except:  # noqa
                     # skip unusable device
@@ -138,7 +138,8 @@ class Datalogger:
             "physical_index": -1,  # Special index for dummy
             "physical_name": "Dummy",
             "api_name": "Dummy",
-            "n_chs": DUMMY_CHANNELS
+            "n_chs": DUMMY_CHANNELS,
+            "default_sr": DUMMY_SR
         }
 
         return phys_devices
@@ -175,7 +176,8 @@ class Datalogger:
                     "physical_index": -1,
                     "physical_name": "",
                     "api_name": "",
-                    "n_chs": 0
+                    "n_chs": 0,
+                    "default_sr": DUMMY_SR
                 }
 
         # Add unmatched physical devices

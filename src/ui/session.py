@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import numpy as np
 from nicegui import ui
 
-from src.device.datalogger import Datalogger
+from src.device.datalogger import Datalogger, DUMMY_SR
 from src.ui import GS, DATA_DIR
 from src.ui.utils import ControlManager, get_existing_sorted, MyPlot, MyUI, CallbackBlocker
 
@@ -740,17 +740,21 @@ def _logger_value2name(value):
     return value.split("  【")[0]
 
 
-def _get_selected_device_nch():
+def _get_selected_device_nch(return_default_sr=False):
     """Get name and channels of selected device."""
     device_name = _logger_value2name(CM["select_device"].value)
     n_channels = CM["detected_devices"][device_name]["n_chs"]
-    return device_name, n_channels
+    if not return_default_sr:
+        return device_name, n_channels
+    default_sr = CM["detected_devices"][device_name]["default_sr"]
+    return device_name, n_channels, default_sr
 
 
 def _check_monitor(_=None):
     """Check if monitor is available."""
-    device_name, n_channels = _get_selected_device_nch()
+    device_name, n_channels, default_sr = _get_selected_device_nch(return_default_sr=True)
     CM.update("button_monitor", props="disable", props_remove=n_channels > 0)
+    CM.update("number_sr", default_sr)
     _check_channels()
 
 
@@ -817,8 +821,8 @@ def monitor_device(_=None):
                         "Refresh Interval (s)", value=0.5, min=0.1, step=0.1
                     ).classes("flex-1")
                     window_selector = ui.select(
-                        options=[256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536],
-                        value=1024,
+                        options=[samplerate // 4, samplerate // 2, samplerate, samplerate * 2, samplerate * 4],
+                        value=samplerate,
                         label="Window Size"
                     ).classes("flex-1")
 
@@ -1196,7 +1200,8 @@ def _initialize_session_ui(e):
                     CM["select_device"] = ui.select(
                         ["Dummy"], value="Dummy", label="Device",
                         on_change=_check_monitor
-                    ).classes('flex-1')
+                    ).classes('flex-1') \
+                        .style('max-width: 300px; white-space: nowrap; overflow: hidden;')
 
                     # Pop up devices and select Dummy
                     _refresh_device()
@@ -1219,7 +1224,7 @@ def _initialize_session_ui(e):
                     SESSION_OPTIONS["datatype"], value="float32",
                     label="Datatype (float32 is recommended)",
                     on_change=_on_change_select_datatype).classes('w-full')
-                CM["number_sr"] = MyUI.number_int("Sampling Rate", min=1, value=10000)
+                CM["number_sr"] = MyUI.number_int("Sampling Rate", min=1, value=DUMMY_SR)
                 CM["number_duration"] = MyUI.number_int("Duration (s)", min=1, value=5)
 
             ##########
