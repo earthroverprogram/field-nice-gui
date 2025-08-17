@@ -40,7 +40,8 @@
   "datalogger": {
     "device": "Dummy",
     "datatype": "float32",
-    "samplerate": 44100,
+    "device_samplerate": 44100,
+    "result_samplerate": 10000,
     "duration": 5
   },
   "source": {

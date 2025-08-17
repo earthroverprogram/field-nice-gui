@@ -390,7 +390,8 @@ async def _save_session(_=None):
         "datalogger": {
             "device": _logger_value2name(CM["select_device"].value),
             "datatype": CM["select_datatype"].value,
-            "samplerate": int(CM["number_sr"].value),
+            "device_samplerate": int(CM["number_device_sr"].value),
+            "result_samplerate": int(CM["number_result_sr"].value),
             "duration": int(CM["number_duration"].value)
         },
         "source": {
@@ -480,7 +481,8 @@ def _load_session(json_path, input_name):
         # Datalogger
         CM.update("select_device", _logger_name2value(data["datalogger"]["device"]))
         CM.update("select_datatype", data["datalogger"]["datatype"])
-        CM.update("number_sr", data["datalogger"]["samplerate"])
+        CM.update("number_device_sr", data["datalogger"]["device_samplerate"])
+        CM.update("number_result_sr", data["datalogger"]["result_samplerate"])
         CM.update("number_duration", data["datalogger"]["duration"])
 
         # Source
@@ -551,7 +553,7 @@ def _on_change_select_session(_=None):
                 "number_nx", "number_ny", "number_ox", "number_oy",
                 "number_dx", "number_dy", "number_sx", "number_sy",
                 "input_naming",
-                "select_device", "select_datatype", "number_sr", "number_duration",
+                "select_device", "select_datatype", "number_device_sr", "number_result_sr", "number_duration",
                 "select_excitation", "select_direction", "select_coupling", "number_repeats",
                 "number_st_x", "number_st_y", "number_st_ch", "input_st_naming",
                 "select_weather", "select_temperature",
@@ -754,7 +756,7 @@ def _check_monitor(_=None):
     """Check if monitor is available."""
     device_name, n_channels, default_sr = _get_selected_device_nch(return_default_sr=True)
     CM.update("button_monitor", props="disable", props_remove=n_channels > 0)
-    CM.update("number_sr", default_sr)
+    CM.update("number_device_sr", default_sr)
     _check_channels()
 
 
@@ -794,7 +796,7 @@ def monitor_device(_=None):
         return
 
     datatype = CM["select_datatype"].value
-    samplerate = CM["number_sr"].value
+    samplerate = CM["number_device_sr"].value
     channel_list = list(range(1, n_channels + 1))
 
     # --- Step 2: Define UI and Datalogger instance ---
@@ -977,7 +979,8 @@ def get_session_dict():
             "name": device_name,
             "n_channels": n_channels,
             "datatype": CM["select_datatype"].value,
-            "samplerate": CM["number_sr"].value,
+            "device_samplerate": CM["number_device_sr"].value,
+            "result_samplerate": CM["number_result_sr"].value,
             "duration": CM["number_duration"].value
         }
     }
@@ -1224,7 +1227,9 @@ def _initialize_session_ui(e):
                     SESSION_OPTIONS["datatype"], value="float32",
                     label="Datatype (float32 is recommended)",
                     on_change=_on_change_select_datatype).classes('w-full')
-                CM["number_sr"] = MyUI.number_int("Sampling Rate", min=1, value=DUMMY_SR)
+                with MyUI.row():
+                    CM["number_device_sr"] = MyUI.number_int("Device Samplerate (Hz)", min=1, value=DUMMY_SR, full=False)
+                    CM["number_result_sr"] = MyUI.number_int("Result Samplerate (Hz)", min=1, value=10000, full=False)
                 CM["number_duration"] = MyUI.number_int("Duration (s)", min=1, value=5)
 
             ##########

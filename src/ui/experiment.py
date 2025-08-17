@@ -754,20 +754,22 @@ def _save_data(data: np.ndarray):
     stream = Stream()
     session_dict = get_session_dict()
     naming_dict = session_dict["naming"]
-    samplerate = session_dict["datalogger"]["samplerate"]
+    device_samplerate = session_dict["datalogger"]["device_samplerate"]
+    result_samplerate = session_dict["datalogger"]["result_samplerate"]
     for ch_index, (logical_ch, naming) in enumerate(naming_dict.items()):
         if ch_index >= data.shape[1]:
             ui.notify(f"Channel mismatch: not enough data columns for {logical_ch}", color='negative')
             continue
         network, station, channel = naming.split(".")
         trace = Trace(data[:, ch_index].copy(), header={
-            "sampling_rate": samplerate,
+            "sampling_rate": device_samplerate,
             "starttime": now.replace(microsecond=0),
             "network": network,
             "station": station,
             "channel": channel,
         })
         stream.append(trace)
+    stream.resample(sampling_rate=result_samplerate)  # Resample
 
     # Step 4: Save to MiniSEED
     try:
@@ -861,7 +863,7 @@ async def _record():
             logical_name=logical_name,
             channel_list=channel_list,
             datatype=datatype,
-            samplerate=samplerate,
+            samplerate=device_samplerate,
         )
 
     # If currently recording: STOP
@@ -882,7 +884,7 @@ async def _record():
     info = session_dict["datalogger"]
     logical_name = info["name"]
     duration = info["duration"]
-    samplerate = info["samplerate"]
+    device_samplerate = info["device_samplerate"]
     datatype = info["datatype"]
     channel_list = list(session_dict["naming"].keys())
 
