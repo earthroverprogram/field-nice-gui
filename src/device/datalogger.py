@@ -120,8 +120,8 @@ class Datalogger:
                                         blocksize=64):
                         sd.sleep(20)  # short test, ms
 
-                    # Create unique key: {device_name}_{api_name}
-                    device_key = f"{name}_{api_name}"
+                    # Create unique key
+                    device_key = f"{idx} - {name}"
                     phys_devices[device_key] = {
                         "physical_index": idx,
                         "physical_name": name,
