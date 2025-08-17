@@ -14,7 +14,7 @@ Once installed, you can proceed with the steps below.
 
 ---
 
-## 📦 Installation
+## 📦 Install Field-UI
 
 All commands below must be run in a **terminal with Anaconda available**.  
 - On **Windows**, use the **Anaconda Prompt** (not PowerShell or CMD).  
