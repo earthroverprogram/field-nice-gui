@@ -959,9 +959,9 @@ def _get_trailing():
     """Return trailing information."""
     if CM["checkbox_st"].value:
         return {
-            "shift_x": CM["number_st_x"].value,
-            "shift_y": CM["number_st_y"].value,
-            "channel": CM["number_st_ch"].value
+            "shift_x": int(CM["number_st_x"].value),
+            "shift_y": int(CM["number_st_y"].value),
+            "channel": int(CM["number_st_ch"].value)
         }
     else:
         return None
