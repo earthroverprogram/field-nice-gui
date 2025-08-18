@@ -931,6 +931,11 @@ async def _record():
     # Start progress bar update loop
     start_time = time.perf_counter()
     while CM["is_recording"] and time.perf_counter() - start_time < duration:
+        if CM["datalogger"].last_exception is not None:
+            ui.notify(f"Recording failed: {CM['datalogger'].last_exception}", color="negative")
+            CM["datalogger"].last_exception = None
+            await _reset_ui()
+            return
         elapsed = time.perf_counter() - start_time
         CM["progress"].set_value(elapsed / duration)
         await asyncio.sleep(0.05)

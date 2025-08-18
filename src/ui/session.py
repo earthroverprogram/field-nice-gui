@@ -940,6 +940,15 @@ def monitor_device(_=None):
         on_data=_on_data_try
     )
 
+    # --- Step 5: Watch for background errors ---
+    def _check_error():
+        if datalogger.last_exception:
+            ui.notify(f"Monitoring stopped: {datalogger.last_exception}", color="negative")
+            _close_and_stop()
+            datalogger.last_exception = None
+
+    ui.timer(0.2, _check_error)
+
 
 ##################
 # FOR EXPERIMENT #
@@ -1228,8 +1237,10 @@ def _initialize_session_ui(e):
                     label="Datatype (float32 is recommended)",
                     on_change=_on_change_select_datatype).classes('w-full')
                 with MyUI.row():
-                    CM["number_device_sr"] = MyUI.number_int("Device Samplerate (Hz)", min=1, value=DUMMY_SR, full=False)
-                    CM["number_result_sr"] = MyUI.number_int("Result Samplerate (Hz)", min=1, value=10000, full=False)
+                    CM["number_device_sr"] = MyUI.number_int("Device Samplerate (Hz)",
+                                                             min=1, value=DUMMY_SR, full=False)
+                    CM["number_result_sr"] = MyUI.number_int("Result Samplerate (Hz)",
+                                                             min=1, value=10000, full=False)
                 CM["number_duration"] = MyUI.number_int("Duration (s)", min=1, value=5)
 
             ##########

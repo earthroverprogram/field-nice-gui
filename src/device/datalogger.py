@@ -39,6 +39,7 @@ class Datalogger:
         self.datatype = None
         self.original_channels = None
         self.invalid_channels = []
+        self.last_exception = None
 
     def __enter__(self):
         return self
@@ -200,32 +201,36 @@ class Datalogger:
         rng = np.random.default_rng()
 
         def dummy_loop():
-            while not self.stop_flag:
-                # Generate band-limited random signal
-                base = rng.normal(0, 0.2, size=(blocksize, DUMMY_CHANNELS))
-                base = np.cumsum(base, axis=0)  # Optional: integrate to get smoother appearance
+            try:
+                while not self.stop_flag:
+                    # Generate band-limited random signal
+                    base = rng.normal(0, 0.2, size=(blocksize, DUMMY_CHANNELS))
+                    base = np.cumsum(base, axis=0)  # Optional: integrate to get smoother appearance
 
-                # Optional: slight channel offset
-                scale = 0.5  # keep sine wave within ±0.5 for float types
-                if np.issubdtype(dtype, np.integer):
-                    scale = 0.1 * np.iinfo(dtype).max
+                    # Optional: slight channel offset
+                    scale = 0.5  # keep sine wave within ±0.5 for float types
+                    if np.issubdtype(dtype, np.integer):
+                        scale = 0.1 * np.iinfo(dtype).max
 
-                for ch in self.active_channels:
-                    wave = np.sin(2 * np.pi * (ch + 1) * np.arange(blocksize) / samplerate)
-                    base[:, ch] = scale * (base[:, ch] + wave)
+                    for ch in self.active_channels:
+                        wave = np.sin(2 * np.pi * (ch + 1) * np.arange(blocksize) / samplerate)
+                        base[:, ch] = scale * (base[:, ch] + wave)
 
-                if np.issubdtype(dtype, np.integer):
-                    info = np.iinfo(dtype)
-                    selected = np.clip(base[:, self.active_channels], info.min, info.max).astype(dtype)
-                else:
-                    selected = base[:, self.active_channels].astype(dtype)
+                    if np.issubdtype(dtype, np.integer):
+                        info = np.iinfo(dtype)
+                        selected = np.clip(base[:, self.active_channels], info.min, info.max).astype(dtype)
+                    else:
+                        selected = base[:, self.active_channels].astype(dtype)
 
-                if self.mode == 'record':
-                    self.buffer.append(selected)
-                elif self.mode == 'monitor' and self.on_data:
-                    self.on_data(selected)
+                    if self.mode == 'record':
+                        self.buffer.append(selected)
+                    elif self.mode == 'monitor' and self.on_data:
+                        self.on_data(selected)
 
-                time.sleep(interval)
+                    time.sleep(interval)
+            except Exception as e:
+                self.last_exception = e
+                self.stop_flag = True  # kill the loop gracefully
 
         self.thread = threading.Thread(target=dummy_loop)
         self.thread.start()
@@ -267,13 +272,18 @@ class Datalogger:
             return
 
         def callback(indata, frames, time_info, status):  # noqa
-            if self.stop_flag:
+            try:
+                if self.stop_flag:
+                    raise sd.CallbackStop()
+                selected = indata[:, self.active_channels].copy()
+                if self.mode == 'record':
+                    self.buffer.append(selected)
+                elif self.mode == 'monitor' and self.on_data:
+                    self.on_data(selected)
+            except Exception as e:
+                self.last_exception = e
+                self.stop_flag = True  # kill the loop gracefully
                 raise sd.CallbackStop()
-            selected = indata[:, self.active_channels].copy()
-            if self.mode == 'record':
-                self.buffer.append(selected)
-            elif self.mode == 'monitor' and self.on_data:
-                self.on_data(selected)
 
         # Use physical_index instead of physical_name to avoid ambiguity
         device_param = physical_index if physical_index >= 0 else physical_name
