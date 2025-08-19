@@ -245,7 +245,7 @@ class Datalogger:
         self.on_data = on_data
         self.stop_flag = False
         self.buffer = [] if mode == 'record' else None
-        self.active_channels = [ch - 1 for ch in channel_list]
+        self.active_channels = [int(ch) - 1 for ch in channel_list]
         self.original_channels = self.active_channels.copy()
         self.invalid_channels = []
 
