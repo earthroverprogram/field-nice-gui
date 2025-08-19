@@ -941,10 +941,13 @@ def monitor_device(_=None):
     )
 
     # --- Step 5: Watch for background errors ---
+    warned_messages = set()
     def _check_error():
         if datalogger.last_exception:
-            ui.notify(f"Monitoring stopped: {datalogger.last_exception}", color="negative")
-            _close_and_stop()
+            msg = str(datalogger.last_exception)
+            if msg not in warned_messages:
+                ui.notify(f"Monitoring warning: {msg}", color="warning")
+                warned_messages.add(msg)
             datalogger.last_exception = None
 
     ui.timer(0.2, _check_error)
