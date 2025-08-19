@@ -930,12 +930,17 @@ async def _record():
 
     # Start progress bar update loop
     start_time = time.perf_counter()
+    warned_messages = set()
+
     while CM["is_recording"] and time.perf_counter() - start_time < duration:
-        if CM["datalogger"].last_exception is not None:
-            ui.notify(f"Recording failed: {CM['datalogger'].last_exception}", color="negative")
+        err = CM["datalogger"].last_exception
+        if err is not None:
+            msg = str(err)
+            if msg not in warned_messages:
+                ui.notify(f"Recording warning: {msg}", color="warning")
+                warned_messages.add(msg)
             CM["datalogger"].last_exception = None
-            await _reset_ui()
-            return
+
         elapsed = time.perf_counter() - start_time
         CM["progress"].set_value(elapsed / duration)
         await asyncio.sleep(0.05)
