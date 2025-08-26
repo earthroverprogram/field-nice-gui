@@ -20,7 +20,7 @@ import tempfile
 import subprocess
 from src.device.datalogger import Datalogger
 from src.ui import GS, DATA_DIR
-from src.ui.session import get_session_dict, monitor_device
+from src.ui.session import get_session_dict, monitor_device, refresh_device
 from src.ui.utils import ControlManager, MyPlot, MyUI, CallbackBlocker, ThreeImageViewer, _detect_snuffler
 
 # --- UI Control Registry ---
@@ -1294,16 +1294,22 @@ def _initialize_experiment_ui(_=None):
                         CM["button_next"] = ui.button(icon='chevron_right', on_click=_go_next) \
                             .classes('text-6xl').props("flat round")
 
-                        session_dict = get_session_dict()
-
                     with ui.row().classes('items-center').style(
                             'position: absolute; top: 0; right: 0; height: 56px; margin-right: 8px;'):
+                        # Let user refresh device detection
+                        ui.button(
+                            icon="refresh",
+                            on_click=refresh_device
+                        ).classes('w-8 h-8')
+
+                        # Let user monitor selected device
                         CM["button_monitor"] = ui.button(
                             icon="monitor_heart",
                             on_click=monitor_device
                         ).classes('w-8 h-8')
+
                         CM.update("button_monitor", props="disable",
-                                  props_remove=session_dict["datalogger"]["n_channels"] > 0)
+                                  props_remove=get_session_dict()["datalogger"]["n_channels"] > 0)
 
                     # --- Info ---
                     CM["label_final"] = ui.label().classes('font-bold -mt-2 text-xl mr-2 font-mono w-full text-center')
