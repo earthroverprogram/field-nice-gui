@@ -543,6 +543,52 @@ def _restore_for_new():
     _check_save()
 
 
+async def _delete_session(_=None):
+    name = CM["input_name"].value.strip()
+    lics = CM["select_lics"].value
+    folder = DATA_DIR / lics / name
+    folder.mkdir(parents=True, exist_ok=True)
+    json_path = folder / "session_state.json"
+
+    # --- Abort if file already exists and folder contains any subfolders ---
+    if json_path.exists():
+        if any(p.is_dir() for p in folder.iterdir()):
+            ui.notify(f'Session "{name}" already exists and contains Experiments. Deletion aborted.',
+                      color='negative')
+            return
+
+        # Ask for confirmation to overwrite
+        dlg = ui.dialog().props('persistent')
+        with dlg, ui.card():
+            ui.label(f'⚠️ Session "{name}" already exists but contains no Experiment. Delete it?')
+            with ui.row().classes('w-full justify-end'):
+                ui.button('No', on_click=lambda: dlg.submit(False)).classes("flex-1")
+                ui.button('Yes, delete', color='negative',
+                          on_click=lambda: dlg.submit(True)).classes("flex-1")
+        dlg.open()
+        if not await dlg:
+            return
+
+    # --- Update dropdown options ---
+    # Do this before removing the json so that fields are preserved
+    options = CM["select_session"].options
+    if name in options:
+        CM.update("select_session", options=[op for op in options if op != name])
+    CM.update("select_session", value="<NEW>")
+
+    # --- Delete files/folder ---
+    try:
+        if json_path.exists():
+            json_path.unlink()
+        # Remove folder if empty
+        if not any(folder.iterdir()):
+            folder.rmdir()
+        ui.notify(f'Session "{name}" deleted.', color='positive')
+    except Exception as e:  # noqa
+        ui.notify(f'Failed to delete {folder}: {e}', color='negative')
+        return
+
+
 def _on_change_select_session(_=None):
     """Handle user changing selected session, including loading saved session data."""
     is_new = _is_new()
@@ -570,6 +616,7 @@ def _on_change_select_session(_=None):
     CM.update("input_time", classes="hidden", classes_remove=not is_new)
     CM.update("button_save", classes="hidden", classes_remove=is_new)
     CM.update("text_warn", classes="hidden", classes_remove=is_new)
+    CM.update("row_delete", classes="hidden", classes_remove=not is_new)
 
     # 3. If loading existing session, populate fields from saved data
     lics = CM["select_lics"].value
@@ -760,7 +807,7 @@ def _check_monitor(_=None):
     _check_channels()
 
 
-def _refresh_device(_=None):
+def refresh_device(_=None):
     """Refresh device table."""
     # Update device availability
     CM["detected_devices"] = Datalogger.get_logical_devices()
@@ -1043,6 +1090,14 @@ def _initialize_session_ui(e):
                 validation=NAME_VALIDATE_LEGACY,
             ).classes('flex-1').on("blur", _on_blur_name).props('autocomplete=off')
 
+            # Deletion
+            with ui.row().style('align-items: center; height: 56px;').classes("hidden") as CM["row_delete"]:
+                ui.button(
+                    icon="delete",
+                    color='negative',
+                    on_click=_delete_session
+                ).classes('w-8 h-8')
+
             # Name format
             CM["checkbox_04d"] = MyUI.checkbox(
                 "Legacy naming: session_0001. Enter 1–9999.",
@@ -1220,13 +1275,13 @@ def _initialize_session_ui(e):
                         .style('max-width: 300px; white-space: nowrap; overflow: hidden;')
 
                     # Pop up devices and select Dummy
-                    _refresh_device()
+                    refresh_device()
 
                     # Let user refresh device detection
                     with ui.row().style('align-items: center; height: 56px;'):
                         ui.button(
                             icon="refresh",
-                            on_click=_refresh_device
+                            on_click=refresh_device
                         ).classes('w-8 h-8')
 
                     # Let user monitor selected device

@@ -106,6 +106,51 @@ async def _save_lics(_=None):
     CM.update("select_lics", value=name)
 
 
+async def _delete_lics(_=None):
+    """Delete current LICS and update selection."""
+    name = CM["input_name"].value.strip()
+    folder = DATA_DIR / name
+    json_path = folder / "lics_state.json"
+
+    # --- Abort if file exists and folder contains subfolders ---
+    if json_path.exists():
+        if any(p.is_dir() for p in folder.iterdir()):
+            ui.notify(f'LICS "{name}" already exists and contains Sessions. Deletion aborted.',
+                      color='negative')
+            return
+
+        # Ask for confirmation
+        dlg = ui.dialog().props('persistent')
+        with dlg, ui.card():
+            ui.label(f'⚠️ LICS "{name}" already exists but contains no Session. Delete it?')
+            with ui.row().classes('w-full justify-end'):
+                ui.button('No', on_click=lambda: dlg.submit(False)).classes("flex-1")
+                ui.button('Yes, delete', color='negative',
+                          on_click=lambda: dlg.submit(True)).classes("flex-1")
+        dlg.open()
+        if not await dlg:
+            return
+
+    # --- Update dropdown options ---
+    # Do this before removing the json so that fields are preserved
+    options = CM["select_lics"].options
+    if name in options:
+        CM.update("select_lics", options=[op for op in options if op != name])
+    CM.update("select_lics", value="<NEW>")
+
+    # --- Delete files/folder ---
+    try:
+        if json_path.exists():
+            json_path.unlink()
+        # Remove folder if empty
+        if not any(folder.iterdir()):
+            folder.rmdir()
+        ui.notify(f'LICS "{name}" deleted.', color='positive')
+    except Exception as e:  # noqa
+        ui.notify(f'Failed to delete {folder}: {e}', color='negative')
+        return
+
+
 def _load_lics(json_path, name=None):
     """Load LICS from json."""
     with open(json_path, "r") as f:
@@ -167,6 +212,7 @@ def _on_change_select_lics(_=None):
     CM.update("input_time", classes="hidden", classes_remove=not is_new)
     CM.update("button_save", classes="hidden", classes_remove=is_new)
     CM.update("text_warn", classes="hidden", classes_remove=is_new)
+    CM.update("row_delete", classes="hidden", classes_remove=not is_new)
 
     # 3. If loading existing LICS, populate fields from saved data
     if not is_new:
@@ -244,13 +290,21 @@ def initialize():
     CM["select_lics"].bind_value_to(GS, "selected_lics")
 
     # --- Name Input ---
-    CM["input_name"] = ui.input(
-        "Name",
-        on_change=_check_save,
-        validation={
-            "Name cannot be '<NEW>'": lambda name: name.strip() != "<NEW>"
-        }
-    ).classes('w-full').props('autocomplete=off')
+    with MyUI.row():
+        CM["input_name"] = ui.input(
+            "Name",
+            on_change=_check_save,
+            validation={
+                "Name cannot be '<NEW>'": lambda name: name.strip() != "<NEW>"
+            }
+        ).classes('flex-1').props('autocomplete=off')
+
+        with ui.row().style('align-items: center; height: 56px;').classes("hidden") as CM["row_delete"]:
+            ui.button(
+                icon="delete",
+                color='negative',
+                on_click=_delete_lics
+            ).classes('w-8 h-8')
 
     # --- Location Row ---
     with MyUI.row():
