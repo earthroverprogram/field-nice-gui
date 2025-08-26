@@ -942,6 +942,7 @@ def monitor_device(_=None):
 
     # --- Step 5: Watch for background errors ---
     warned_messages = set()
+
     def _check_error():
         if datalogger.last_exception:
             msg = str(datalogger.last_exception)
