@@ -994,7 +994,7 @@ def monitor_device(_=None):
     def _check_error():
         if datalogger.last_exception:
             msg = str(datalogger.last_exception)
-            if msg not in warned_messages:
+            if msg and msg not in warned_messages:
                 ui.notify(f"Monitoring warning: {msg}", color="warning")
                 warned_messages.add(msg)
             datalogger.last_exception = None

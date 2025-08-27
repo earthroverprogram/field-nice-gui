@@ -970,7 +970,7 @@ async def _record():
         err = CM["datalogger"].last_exception
         if err is not None:
             msg = str(err)
-            if msg not in warned_messages:
+            if msg and msg not in warned_messages:
                 ui.notify(f"Recording warning: {msg}", color="warning")
                 warned_messages.add(msg)
             CM["datalogger"].last_exception = None
