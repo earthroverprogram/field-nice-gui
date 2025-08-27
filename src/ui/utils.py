@@ -300,19 +300,23 @@ class ThreeImageViewer:
                 transform-origin: right;
                 opacity: 0.7;
             ''').classes(f'flex-[{ratio[2]}]').props('fit=contain')
-            ui.icon('chevron_right') \
+            self.right_icon = ui.icon('chevron_right') \
                 .classes('absolute right-2 top-1/2 -translate-y-1/2 '
                          'text-6xl pointer-events-none text-primary')
 
-    def set_images(self, left, middle, right, fallbacks, number):
+    def set_images(self, left, middle, right, fallbacks, number, number_min, number_max):
         """Set image sources. If a path doesn't exist, fallbacks are used."""
         self.left_img.set_source(left if Path(left).exists() else fallbacks[0])
         self.middle_img.set_source(middle if Path(middle).exists() else fallbacks[1])
         self.right_img.set_source(right if Path(right).exists() else fallbacks[2])
-        if number > 1:
+        if number > number_min:
             self.left_icon.style('visibility: visible')
         else:
             self.left_icon.style('visibility: hidden')
+        if number < number_max:
+            self.right_icon.style('visibility: visible')
+        else:
+            self.right_icon.style('visibility: hidden')
 
 
 def _detect_snuffler():

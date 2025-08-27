@@ -666,14 +666,15 @@ def _on_change_experiment_number(_=None):
     CM.update("row_delete", classes="hidden", classes_remove=not is_new)
 
     # Previous button
-    number = int(CM["number_experiment"].value)
+    number, folder = _get_experiment_folder()
     CM.update("button_prev", props="disable", props_remove=number > 1)
+    CM.update("button_next", props="disable",
+              props_remove=number < _allocate_new_experiment_number(folder.parent))
 
     # 2. Toggle visibility of controls
     CM.update("input_time", classes="hidden", classes_remove=not is_new)
 
     # 3. If loading existing experiment, populate fields from saved data
-    _, folder = _get_experiment_folder()
     if not is_new:
         # Load selected
         json_path = folder / "experiment_state.json"
@@ -705,7 +706,8 @@ def _on_change_experiment_number(_=None):
         folder.parent / f"experiment_{number - 1:04d}/preview.png",
         folder.parent / f"experiment_{number:04d}/preview.png",
         folder.parent / f"experiment_{number + 1:04d}/preview.png",
-        fallbacks=fallbacks, number=number
+        fallbacks=fallbacks, number=number, number_min=1,
+        number_max=_allocate_new_experiment_number(folder.parent),
     )
     data_exist = (folder.parent / f"experiment_{number:04d}/data.mseed").exists()
     CM.update("button_snuffler", props="disable", props_remove=data_exist)
@@ -1007,7 +1009,9 @@ def _go_previous():
 
 def _go_next():
     """Go next experiment."""
-    CM["number_experiment"].value += 1
+    number, folder = _get_experiment_folder()
+    if CM["number_experiment"].value < _allocate_new_experiment_number(folder.parent):
+        CM["number_experiment"].value += 1
 
 
 def _on_change_edit_snuffler(_=None):
