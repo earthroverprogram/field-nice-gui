@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import re
+import shutil
 import time
 import warnings
 from types import SimpleNamespace
@@ -607,6 +608,38 @@ def _restore_for_new():
     return from_previous
 
 
+async def _delete_experiment(_=None):
+    """Delete current Experiment and update selection."""
+    number, folder = _get_experiment_folder()
+    folder.mkdir(parents=True, exist_ok=True)
+    json_path = folder / "experiment_state.json"
+
+    if json_path.exists():
+        # Ask for confirmation to overwrite
+        dlg = ui.dialog().props('persistent')
+        with dlg, ui.card():
+            ui.label(f'⚠️ Experiment {number} already exists and contains data. Delete it?')
+            with ui.row().classes('w-full justify-end'):
+                ui.button('No', on_click=lambda: dlg.submit(False)).classes("flex-1")
+                ui.button('Yes, delete', color='negative',
+                          on_click=lambda: dlg.submit(True)).classes("flex-1")
+        dlg.open()
+        if not await dlg:
+            return
+
+    # --- Delete files/folder ---
+    try:
+        shutil.rmtree(folder)
+        ui.notify(f'Experiment {number} deleted.', color='positive')
+    except Exception as e:  # noqa
+        ui.notify(f'Failed to delete {folder}: {e}', color='negative')
+        return
+
+    # --- Update selected ---
+    CM.update("number_experiment", value=number + 1)  # To trigger change
+    CM.update("number_experiment", value=number)
+
+
 def _allocate_new_experiment_number(folder):
     """Return the next of max of existing."""
     existing = _get_existing_experiments_sorted(folder)
@@ -630,6 +663,7 @@ def _on_change_experiment_number(_=None):
         CM.update(key, props="readonly", props_remove=is_new)
     CM.update("input_post_notes", props="readonly", props_remove=not is_new)
     CM.update("code_gain_param", props="disable", props_remove=is_new)
+    CM.update("row_delete", classes="hidden", classes_remove=not is_new)
 
     # Previous button
     number = int(CM["number_experiment"].value)
@@ -1074,14 +1108,24 @@ def _initialize_experiment_ui(_=None):
 
         with MyUI.row():
             with ui.column().classes("flex-1"):
-                # --- Experiment Number ---
-                session_folder = DATA_DIR / lics / session
-                number_init = _allocate_new_experiment_number(session_folder)
-                CM["number_experiment"] = MyUI.number_int(
-                    "Experiment Number",
-                    min=1, value=number_init,
-                    on_change=_on_change_experiment_number,
-                )
+                with MyUI.row():
+                    # --- Experiment Number ---
+                    session_folder = DATA_DIR / lics / session
+                    number_init = _allocate_new_experiment_number(session_folder)
+                    CM["number_experiment"] = MyUI.number_int(
+                        "Experiment Number",
+                        min=1, value=number_init,
+                        on_change=_on_change_experiment_number,
+                        full=False
+                    )
+
+                    with ui.row().style('align-items: center; height: 56px;').classes("hidden") as CM["row_delete"]:
+                        ui.button(
+                            icon="delete",
+                            color='negative',
+                            on_click=_delete_experiment
+                        ).classes('w-8 h-8')
+
             with ui.column().classes("flex-1"):
                 with MyUI.row():
                     CM["select_session"] = ui.input("Under Session", value=session). \
