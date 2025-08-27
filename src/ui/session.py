@@ -544,6 +544,7 @@ def _restore_for_new():
 
 
 async def _delete_session(_=None):
+    """Delete current Session and update selection."""
     name = CM["input_name"].value.strip()
     lics = CM["select_lics"].value
     folder = DATA_DIR / lics / name
