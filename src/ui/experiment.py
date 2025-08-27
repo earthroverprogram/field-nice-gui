@@ -1051,6 +1051,12 @@ def _save_option(key, val):
         pass  # No need to prompt user, just use default
 
 
+def _refresh_device():
+    refresh_device()
+    CM.update("button_monitor", props="disable",
+              props_remove=get_session_dict()["datalogger"]["n_channels"] > 0)
+
+
 ###########################
 # MAIN UI INITIALIZATION  #
 ###########################
@@ -1299,7 +1305,7 @@ def _initialize_experiment_ui(_=None):
                         # Let user refresh device detection
                         ui.button(
                             icon="refresh",
-                            on_click=refresh_device
+                            on_click=_refresh_device
                         ).classes('w-8 h-8')
 
                         # Let user monitor selected device
