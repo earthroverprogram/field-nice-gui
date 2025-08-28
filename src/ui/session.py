@@ -606,8 +606,7 @@ def _on_change_select_session(_=None):
                 "select_weather", "select_temperature",
                 "select_moisture", "select_texture", "select_order",
                 "select_agriculture", "select_crop", "select_cultivation",
-                "input_computer_op", "input_source_op", "input_protocol_op", "input_others_op",
-                "input_notes"]:
+                "input_computer_op", "input_source_op", "input_protocol_op", "input_others_op"]:
         CM.update(key, props="readonly", props_remove=is_new)
     CM.update("code_custom", props="disable", props_remove=is_new)
     CM.update("checkbox_st", props="disable", props_remove=is_new)
@@ -1001,6 +1000,26 @@ def monitor_device(_=None):
 
     ui.timer(0.2, _check_error)
 
+def _save_notes():
+    """Update notes."""
+    name = CM["input_name"].value.strip()
+    lics = CM["select_lics"].value
+    folder = DATA_DIR / lics / name
+    json_path = folder / "session_state.json"
+    try:
+        # Load
+        with open(json_path, "r") as fs:
+            data = json.load(fs)
+
+        # Update
+        data["notes"] = CM["input_notes"].value.strip()
+
+        # Save
+        with open(json_path, "w") as fs:
+            json.dump(data, fs, indent=2)  # noqa
+    except Exception as e:  # noqa
+        ui.notify(f'Failed to save {json_path}: {e}', color='negative')
+
 
 ##################
 # FOR EXPERIMENT #
@@ -1358,7 +1377,7 @@ def _initialize_session_ui(e):
                 CM["input_others_op"] = ui.input("We are just here 🤗").classes('flex-1')
 
         # --- Notes Input ---
-        CM["input_notes"] = ui.input("Notes").classes('w-full')
+        CM["input_notes"] = ui.input("Notes").classes('w-full').on("blur", _save_notes)
 
         # --- Create Time ---
         CM["input_time"] = ui.input("Create Time").props("readonly").classes('w-full hidden')
