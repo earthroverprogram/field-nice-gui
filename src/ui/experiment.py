@@ -887,6 +887,12 @@ async def _record():
         CM["button_record"].props(remove="disable")
         await asyncio.sleep(0.2)
         CM["progress"].set_value(0.0)
+        CM["button_next"].props(remove="disable")
+        CM["button_prev"].props(remove="disable")
+        CM["previewer"].left_img.on("click", _go_previous)
+        CM["previewer"].right_img.on("click", _go_next)
+        CM["previewer"].left_icon.style('visibility: visible')
+        CM["previewer"].rigth_icon.style('visibility: visible')
         CM["display_countdown"].style("display: none;")
         _on_change_experiment_number()
 
@@ -895,6 +901,12 @@ async def _record():
         CM["button_record"].set_icon("stop_circle")
         CM["button_record"].props(remove="disable")
         CM["progress"].set_value(0.0)
+        CM["button_next"].props("disable")
+        CM["button_prev"].props("disable")
+        CM["previewer"].left_img.on("click", None)
+        CM["previewer"].right_img.on("click", None)
+        CM["previewer"].left_icon.style('visibility: hidden')
+        CM["previewer"].right_icon.style('visibility: hidden')
         CM["datalogger"].start_recording(
             logical_name=logical_name,
             channel_list=channel_list,
