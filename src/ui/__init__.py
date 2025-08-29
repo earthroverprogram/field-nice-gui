@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 
@@ -23,5 +24,13 @@ class State:
 GS = State()
 
 # Global path to the data directory
-DATA_DIR = Path("data")
+DATA_DIR = Path("./data")
+
+# Load config.json if it exists
+config_path = Path("config.json")
+if config_path.exists():
+    with config_path.open("r", encoding="utf-8") as f:
+        config = json.load(f)
+    if "data_dir" in config:
+        DATA_DIR = Path(config["data_dir"]).expanduser().resolve()
 DATA_DIR.mkdir(exist_ok=True)  # Ensure the data directory exists
