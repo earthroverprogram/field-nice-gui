@@ -189,7 +189,7 @@ class Datalogger:
 
         return result
 
-    def _start_streaming_dummy(self, datatype, samplerate, mode, on_data=None):
+    def _prepare_streaming_dummy(self, datatype, samplerate, mode, on_data=None):
         self.mode = mode
         self.on_data = on_data
         self.stop_flag = False
@@ -232,11 +232,10 @@ class Datalogger:
                 self.last_exception = e
                 self.stop_flag = True  # kill the loop gracefully
 
-        self.thread = threading.Thread(target=dummy_loop)
-        self.thread.start()
+        return threading.Thread(target=dummy_loop)
 
-    def _start_streaming(self, logical_name, channel_list,
-                         datatype, samplerate, mode, ignore_invalid_channels=True, on_data=None):
+    def _prepare_streaming(self, logical_name, channel_list,
+                           datatype, samplerate, mode, ignore_invalid_channels=True, on_data=None):
         if datatype == "int24":
             datatype = "int32"  # numpy does not support int24
 
@@ -268,8 +267,7 @@ class Datalogger:
                     f"{[ch + 1 for ch in self.invalid_channels]}")
 
         if physical_name == "Dummy":
-            self._start_streaming_dummy(datatype, samplerate, mode, on_data)
-            return
+            return self._prepare_streaming_dummy(datatype, samplerate, mode, on_data)
 
         def callback(indata, frames, time_info, status):  # noqa
             try:
@@ -296,8 +294,7 @@ class Datalogger:
             dtype=datatype
         )
 
-        self.thread = threading.Thread(target=self._stream_runner)
-        self.thread.start()
+        return threading.Thread(target=self._stream_runner)
 
     def stop_streaming(self):
         self.stop_flag = True
@@ -321,18 +318,31 @@ class Datalogger:
         else:
             return np.empty((0, len(getattr(self, 'original_channels', []))), dtype=self.datatype)
 
-    def start_recording(self, logical_name, channel_list, datatype="float32", samplerate=44100):
+    def prepare_recording(self, logical_name, channel_list, datatype="float32", samplerate=44100):
         """
-        Start recording audio to memory. Use stop_recording() to stop and retrieve result.
+        Prepare recording audio to memory. Use stop_recording() to stop and retrieve result.
         """
-        self._start_streaming(logical_name, channel_list, datatype, samplerate, mode='record')
+        self.thread = self._prepare_streaming(logical_name, channel_list, datatype, samplerate, mode='record')
+
+    def start_recording(self):
+        """
+        Start recording.
+        Must call prepare_recording() first.
+        """
+        if self.thread is None:
+            raise RuntimeError("Recording thread not prepared. Call prepare_recording() first.")
+        if self.thread.is_alive():
+            raise RuntimeError("Recording thread already running.")
+        self.thread.start()
 
     def start_monitoring(self, logical_name, channel_list, datatype="float32", samplerate=44100, on_data=None):
         """
         Start real-time monitoring without recording.
         on_data: callback function to receive audio blocks
         """
-        self._start_streaming(logical_name, channel_list, datatype, samplerate, mode='monitor', on_data=on_data)
+        self.thread = self._prepare_streaming(logical_name, channel_list, datatype, samplerate, mode='monitor',
+                                              on_data=on_data)
+        self.thread.start()
 
     def _stream_runner(self):
         """

@@ -881,6 +881,8 @@ def _save_data(data: np.ndarray):
 
 
 async def _record():
+    """Record data to disk."""
+
     async def _reset_ui():
         CM["is_recording"] = False
         CM["button_record"].set_icon("radio_button_checked")
@@ -892,7 +894,7 @@ async def _record():
         CM["previewer"].left_img.on("click", _go_previous)
         CM["previewer"].right_img.on("click", _go_next)
         CM["previewer"].left_icon.style('visibility: visible')
-        CM["previewer"].rigth_icon.style('visibility: visible')
+        CM["previewer"].right_icon.style('visibility: visible')
         CM["display_countdown"].style("display: none;")
         _on_change_experiment_number()
 
@@ -907,12 +909,7 @@ async def _record():
         CM["previewer"].right_img.on("click", None)
         CM["previewer"].left_icon.style('visibility: hidden')
         CM["previewer"].right_icon.style('visibility: hidden')
-        CM["datalogger"].start_recording(
-            logical_name=logical_name,
-            channel_list=channel_list,
-            datatype=datatype,
-            samplerate=device_samplerate,
-        )
+        CM["datalogger"].start_recording()  # thread already prepared
 
     # If currently recording: STOP
     if CM["is_recording"]:
@@ -923,7 +920,17 @@ async def _record():
 
     # Set gain on EVO-16
     if CM["checkbox_gain_evo16"]:
+        # Show message in countdown label
+        CM["display_countdown"].style("display: block;")
+        CM["display_countdown_label"].classes(remove="text-[200px]").classes(add="text-[50px]")
+        CM["display_countdown_label"].text = "Sending Gain\nto EVO-16..."
+
+        # Run gain adjustment in background
         msg, color = await asyncio.to_thread(_set_preamp_gain_evo16)
+
+        # Hide label again (or leave for "Preparing Stream...")
+        CM["display_countdown"].style("display: none;")
+
         if msg is not None:
             ui.notify(msg, color=color)
 
@@ -936,50 +943,57 @@ async def _record():
     datatype = info["datatype"]
     channel_list = list(session_dict["naming"].keys())
 
-    # Optional countdown before recording starts
-    if CM["checkbox_countdown"].value:
-        # Disable button during countdown
-        CM["button_record"].props("disable")
+    # Disable record button during PREPARE
+    CM["button_record"].props("disable")
 
-        # Play voice prompt if enabled
+    # Show preparing message
+    CM["display_countdown"].style("display: block;")
+    CM["display_countdown_label"].classes(remove="text-[200px]").classes(add="text-[50px]")
+    CM["display_countdown_label"].text = "Preparing\nStream..."
+
+    # PREPARE phase
+    try:
+        await asyncio.to_thread(
+            CM["datalogger"].prepare_recording,
+            logical_name,
+            channel_list,
+            datatype,
+            device_samplerate,
+        )
+    except Exception as e:
+        ui.notify(f"Failed to prepare recording: {e}", color='negative')
+        await _reset_ui()
+        return
+
+    # Countdown or immediate start
+    if CM["checkbox_countdown"].value:
         if CM['select_voice'].value != "<Silent>":
             CM["audio_countdown"].set_source(f"assets/countdown/{CM['select_voice'].value}.mp3")
             CM["audio_countdown"].play()
-            await asyncio.sleep(0.1)  # ensure audio playback starts
+            await asyncio.sleep(0.1)
 
-        # Display countdown numbers: 3, 2, 1
-        CM["display_countdown"].style("display: block;")
+        CM["display_countdown_label"].classes(remove="text-[50px]")
+        CM["display_countdown_label"].classes(add="text-[200px]")
         for word in ["3", "2", "1"]:
-            CM["display_countdown"].text = word
+            CM["display_countdown_label"].text = word
             await asyncio.sleep(1)
 
-        # Display "Go!" and start recording immediately
-        CM["display_countdown"].text = "Go!"
-        try:
-            _start_record()
-        except Exception as e:  # recording failed
-            ui.notify(f"Failed to start recording: {e}", color='negative')
-            await _reset_ui()
-            return
-        await asyncio.sleep(1)
-        CM["display_countdown"].style("display: none;")
+    # Start recording
+    CM["display_countdown_label"].text = "Go!"
+    try:
+        _start_record()
+    except Exception as e:
+        ui.notify(f"Failed to start recording: {e}", color='negative')
+        await _reset_ui()
+        return
 
-        # Re-enable button after countdown
-        CM["button_record"].props(remove="disable")
-
-    else:
-        # No countdown, start recording immediately
-        try:
-            _start_record()
-        except Exception as e:  # recording failed
-            ui.notify(f"Failed to start recording: {e}", color='negative')
-            await _reset_ui()
-            return
-
-    # Start progress bar update loop
     start_time = time.perf_counter()
-    warned_messages = set()
+    await asyncio.sleep(1)
+    CM["display_countdown"].style("display: none;")
+    CM["button_record"].props(remove="disable")
 
+    # Progress bar loop
+    warned_messages = set()
     while CM["is_recording"] and time.perf_counter() - start_time < duration:
         err = CM["datalogger"].last_exception
         if err is not None:
@@ -1305,14 +1319,21 @@ def _initialize_experiment_ui(_=None):
 
                         # Hidden UI for countdown sound and visual
                         CM["audio_countdown"] = ui.audio("", autoplay=False, controls=False)
-                        CM["display_countdown"] = ui.label("321").classes(
+                        CM["display_countdown"] = ui.row().classes(
                             "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 "
-                            "text-primary text-[200px] font-bold z-50 pointer-events-none "
-                            "rounded-xl px-8 py-4 text-center border-8"
+                            "z-50 pointer-events-none rounded-xl border-8 "
+                            "items-center justify-center text-center place-content-center"
                         ).style(
-                            f"display: none; background-color: {MyUI.bg_color()}; min-width: 400px;"
-                            f"border: 8px solid {MyUI.primary_color()};"
+                            f"display: none; "
+                            f"background-color: {MyUI.bg_color()}; "
+                            f"min-width: 400px; min-height: 400px; "
+                            f"border: 8px solid {MyUI.primary_color()}; "
+                            f"white-space: pre-line;"
                         )
+                        with CM["display_countdown"]:
+                            CM["display_countdown_label"] = ui.label("321").classes(
+                                "text-primary text-[200px] font-bold"
+                            )
 
                     # Check channels
                     CM["checkbox_check_ch"] = MyUI.checkbox("Ensure Enough Channels",
