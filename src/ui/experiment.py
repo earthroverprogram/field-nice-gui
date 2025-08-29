@@ -805,6 +805,18 @@ def _save_data(data: np.ndarray):
             "channel": channel,
         })
         stream.append(trace)
+
+        # Check if trace is all zeros
+        if np.allclose(trace.data, 0):
+            ui.notify(f"Channel {ch_index + 1}: all-zero signal", color="warning")
+        else:
+            # Heuristic for "ambient noise only"
+            peak = np.max(np.abs(trace.data))
+            rms = np.sqrt(np.mean(trace.data.astype(np.float64) ** 2))
+            # If peak amplitude is very low AND peak/rms ratio is small, likely noise
+            if rms > 0 and peak / rms < 5:
+                ui.notify(f"Channel {ch_index + 1}: "
+                          f"likely ambient noise (no significant peaks)", color="warning")
     stream.resample(sampling_rate=result_samplerate)  # Resample
 
     # Step 4: Save to MiniSEED
@@ -966,14 +978,13 @@ async def _record():
         return
 
     # Countdown or immediate start
+    CM["display_countdown_label"].classes(remove="text-[50px]")
+    CM["display_countdown_label"].classes(add="text-[200px]")
     if CM["checkbox_countdown"].value:
         if CM['select_voice'].value != "<Silent>":
             CM["audio_countdown"].set_source(f"assets/countdown/{CM['select_voice'].value}.mp3")
             CM["audio_countdown"].play()
             await asyncio.sleep(0.1)
-
-        CM["display_countdown_label"].classes(remove="text-[50px]")
-        CM["display_countdown_label"].classes(add="text-[200px]")
         for word in ["3", "2", "1"]:
             CM["display_countdown_label"].text = word
             await asyncio.sleep(1)
