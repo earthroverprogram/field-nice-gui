@@ -1345,7 +1345,9 @@ def _initialize_session_ui(e):
             CM[f"select_{key}"] = ui.select(
                 options,
                 label=show_text,
-                value="Unknown"
+                value="Unknown",
+                with_input=True,
+                new_value_mode="add-unique"
             ).classes('w-full' if full else "flex-1")
 
         with MyUI.row():

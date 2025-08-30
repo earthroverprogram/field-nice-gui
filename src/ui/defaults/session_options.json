@@ -47,7 +47,8 @@
     "Mild",
     "Warm",
     "Hot",
-    "Scorching"
+    "Scorching",
+    "__°C"
   ],
   "moisture": [
     "Dry",
