@@ -492,16 +492,16 @@ def _load_session(json_path, input_name):
         CM.update("number_repeats", data["source"]["repeats"])
 
         # Conditions
-        CM.update("select_weather", data["on_site"]["weather"])
-        CM.update("select_temperature", data["on_site"]["temperature"])
+        CM.update("select_weather", data["on_site"]["weather"], add_value_to_options=True)
+        CM.update("select_temperature", data["on_site"]["temperature"], add_value_to_options=True)
 
         # Soil description
-        CM.update("select_moisture", data["soil"]["moisture"])
-        CM.update("select_texture", data["soil"]["texture"])
-        CM.update("select_order", data["soil"]["order"])
-        CM.update("select_agriculture", data["soil"]["agriculture"])
-        CM.update("select_crop", data["soil"]["crop"])
-        CM.update("select_cultivation", data["soil"]["cultivation"])
+        CM.update("select_moisture", data["soil"]["moisture"], add_value_to_options=True)
+        CM.update("select_texture", data["soil"]["texture"], add_value_to_options=True)
+        CM.update("select_order", data["soil"]["order"], add_value_to_options=True)
+        CM.update("select_agriculture", data["soil"]["agriculture"], add_value_to_options=True)
+        CM.update("select_crop", data["soil"]["crop"], add_value_to_options=True)
+        CM.update("select_cultivation", data["soil"]["cultivation"], add_value_to_options=True)
 
         # Operators
         CM.update("input_computer_op", data["operators"]["computer"])

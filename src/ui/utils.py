@@ -31,7 +31,7 @@ class ControlManager:
 
     def update(self, key, value=None, options=None, label=None, text=None,
                props=None, props_remove=False,
-               classes=None, classes_remove=False):
+               classes=None, classes_remove=False, add_value_to_options=False):
         # Update various attributes of a control identified by key
         ctr = self.controls.get(key, None)
         if ctr is None:
@@ -40,6 +40,9 @@ class ControlManager:
         # Update dropdown or selection options
         if options is not None:
             ctr.options = options
+
+        if add_value_to_options and value not in ctr.options:
+            ctr.options = ctr.options + [value]
 
         # Update the control's value
         if value is not None:
