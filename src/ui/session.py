@@ -1104,6 +1104,14 @@ def get_session_dict():
         }
     }
 
+def get_receiver_z():
+    """Get the Z coordinates"""
+    layout = _compute_layout()
+    z = np.zeros(len(layout), dtype=int)
+    for i, dz in CM["shift_layout_z"].items():
+        z[i - 1] = dz
+    return z
+
 
 ###########################
 # MAIN UI INITIALIZATION  #

@@ -21,7 +21,7 @@ import tempfile
 import subprocess
 from src.device.datalogger import Datalogger
 from src.ui import GS, DATA_DIR, HELPS
-from src.ui.session import get_session_dict, monitor_device, refresh_device
+from src.ui.session import get_session_dict, monitor_device, refresh_device, get_receiver_z
 from src.ui.utils import ControlManager, MyPlot, MyUI, CallbackBlocker, ThreeImageViewer, detect_snuffler, show_help
 
 # --- UI Control Registry ---
@@ -893,6 +893,24 @@ def _save_data(data: np.ndarray):
 
     except Exception as e:
         ui.notify(f"Failed to save snuffler meta: {e}", color='negative')
+
+    # Step 7: Save all receiver locations
+    try:
+        zs = get_receiver_z()
+        # Handle trailing
+        if len(zs) < len(naming_dict):
+            zs = np.append(zs, int(CM["number_z"].value))
+        stations = [
+            [naming,
+             f"{row['x']:d}",
+             f"{row['y']:d}",
+             f"{z:d}",
+             ]
+            for row, naming, z in zip(CM["table_summary"].rows, naming_dict.values(), zs)
+        ]
+        np.savetxt(folder / "receiver_location.txt", stations, fmt="%s")
+    except Exception as e:
+        ui.notify(f"Failed to save receiver location: {e}", color='negative')
 
 
 async def _record():
