@@ -1053,8 +1053,10 @@ def _go_next():
 
 def _on_change_edit_snuffler(_=None):
     """User edit snuffler path."""
-    if not CM["input_path_snuffler"].value.endswith("snuffler"):
-        CM["input_path_snuffler"].value = _detect_snuffler()
+    if (CM["input_path_snuffler"].value.endswith("snuffler") or
+            CM["input_path_snuffler"].value.endswith("snuffler.exe")):
+        return
+    CM["input_path_snuffler"].value = _detect_snuffler()
 
 
 def _set_preamp_gain_evo16():
