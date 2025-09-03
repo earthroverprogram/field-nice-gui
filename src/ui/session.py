@@ -11,6 +11,7 @@ from nicegui import ui
 from src.device.datalogger import Datalogger, DUMMY_SR
 from src.ui import GS, DATA_DIR
 from src.ui.utils import ControlManager, get_existing_sorted, MyPlot, MyUI, CallbackBlocker
+from src.ui.lics import get_latlon
 
 # --- UI Control Registry ---
 CM = ControlManager()
@@ -1104,6 +1105,7 @@ def get_session_dict():
         }
     }
 
+
 def get_receiver_z():
     """Get the Z coordinates"""
     layout = _compute_layout()
@@ -1436,12 +1438,27 @@ def _initialize_session_ui(e):
         #############
         # Operators #
         #############
-        with MyUI.cap_card("Operators", full=True):
-            with MyUI.row():
-                CM["input_computer_op"] = ui.input("Computer").classes('flex-1')
-                CM["input_source_op"] = ui.input("Source").classes('flex-1')
-                CM["input_protocol_op"] = ui.input("Protocol").classes('flex-1')
-                CM["input_others_op"] = ui.input("We are just here 🤗").classes('flex-1')
+        with MyUI.row():
+            with MyUI.cap_card("GPS Location", full=False) as card:
+                card.classes("flex-[1]")
+                with MyUI.row():
+                    lat, lon = get_latlon()
+                    CM["number_lat"] = ui.number(
+                        "Latitude", value=lat,
+                        min=-90, max=90, step=0.01, format='%.2f'
+                    ).classes('flex-1')
+                    CM["number_lon"] = ui.number(
+                        "Longitude", value=lon,
+                        min=-180, max=180, step=0.01, format='%.2f'
+                    ).classes('flex-1')
+
+            with MyUI.cap_card("Operators", full=False) as card:
+                card.classes("flex-[2]")
+                with MyUI.row():
+                    CM["input_computer_op"] = ui.input("Computer").classes('flex-1')
+                    CM["input_source_op"] = ui.input("Source").classes('flex-1')
+                    CM["input_protocol_op"] = ui.input("Protocol").classes('flex-1')
+                    CM["input_others_op"] = ui.input("We are just here 🤗").classes('flex-1')
 
         # --- Notes Input ---
         CM["input_notes"] = ui.input("Notes").classes('w-full').on("blur", _save_notes)

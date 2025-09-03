@@ -289,6 +289,17 @@ def _save_notes():
         ui.notify(f'Failed to save {json_path}: {e}', color='negative')
 
 
+def get_latlon():
+    try:
+        name = CM["select_lics"].value
+        json_path = DATA_DIR / name / "lics_state.json"
+        with open(json_path, "r") as f:
+            data = json.load(f)
+        return data["origin"]["lat"], data["origin"]["lon"]
+    except:  # noqa
+        return 0., 0.
+
+
 ###########################
 # MAIN UI INITIALIZATION  #
 ###########################
