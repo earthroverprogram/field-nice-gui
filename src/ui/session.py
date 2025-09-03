@@ -1262,7 +1262,7 @@ def _initialize_session_ui(e):
             with MyUI.cap_card("Source Trailing", full=False, height_px=height_px):
                 with MyUI.row():
                     CM["checkbox_st"] = MyUI.checkbox(
-                        "Conduct Source Training", value=True, on_change=_on_change_st)
+                        "Conduct Source Trailing", value=True, on_change=_on_change_st)
                 with MyUI.row():
                     CM["number_st_x"] = MyUI.number_int("Shift X (cm)", value=0, full=False)
                     CM["number_st_y"] = MyUI.number_int("Shift Y (cm)", value=10, full=False)
