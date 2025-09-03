@@ -161,8 +161,8 @@ def _refresh_layout():
                 naming = "E.RR.OR"
 
             # Shift
-            shift = CM["shift_layout"].get(ch, (0, 0))
-            dx, dy = shift
+            dx, dy = CM["shift_layout"].get(ch, (0, 0))
+            dz = CM["shift_layout_z"].get(ch, 0)
 
             # Row
             new_rows.append({
@@ -171,6 +171,7 @@ def _refresh_layout():
                 'y': y,
                 'dx': dx,
                 'dy': dy,
+                'dz': dz,
                 'naming': naming,
                 'lock_shift': not _is_new()
             })
@@ -196,6 +197,7 @@ def _reset_shift_trailing():
     # Clear shift
     if not CM["keep_shift_overwrite"]:
         CM["shift_layout"] = {}
+        CM["shift_layout_z"] = {}
 
     # Reset trailing channel
     if CM["number_st_ch"] is None or layout is None:
@@ -232,13 +234,29 @@ def _on_change_shift(e):
     try:
         dx = int(row['dx'])
         dy = int(row['dy'])
-    except:  # noqa:
+    except:  # noqa
         return  # Do nothing, wait user to finish
     if dx == 0 and dy == 0:
         CM["shift_layout"].pop(ch, None)
     else:
         CM["shift_layout"][ch] = (dx, dy)
-    _refresh_layout()
+    # Refresh plot
+    with CM["figure_layout"]:
+        _plot_layout(CM["figure_layout"], _compute_layout())
+
+
+def _on_change_shift_z(e):
+    """Handle editing shift layout in table."""
+    row = e.args  # props.row
+    ch = row['channel']
+    try:
+        dz = int(row['dz'])
+    except:  # noqa
+        return  # Do nothing, wait user to finish
+    if dz == 0:
+        CM["shift_layout_z"].pop(ch, None)
+    else:
+        CM["shift_layout_z"][ch] = dz
 
 
 def _on_blur_shift(e):
@@ -249,9 +267,22 @@ def _on_blur_shift(e):
         _ = int(row['dx'])
         _ = int(row['dy'])
         # Do nothing, changes already honored by _on_change_shift
-    except:  # noqa:
+    except:  # noqa
         CM["shift_layout"].pop(ch, None)
-        _refresh_layout()
+        # Refresh plot
+        with CM["figure_layout"]:
+            _plot_layout(CM["figure_layout"], _compute_layout())
+
+
+def _on_blur_shift_z(e):
+    """Handle blur shift layout in table."""
+    row = e.args  # props.row
+    ch = row['channel']
+    try:
+        _ = int(row['dz'])
+        # Do nothing, changes already honored by _on_change_shift
+    except:  # noqa
+        CM["shift_layout_z"].pop(ch, None)
 
 
 def is_valid_naming(text: str) -> bool:
@@ -375,6 +406,7 @@ async def _save_session(_=None):
                 "code": CM["code_custom"].value.strip() + "\n",
             },
             "shift": CM["shift_layout"],
+            "shift_z": CM["shift_layout_z"],
             "naming": {
                 "template": CM["input_naming"].value,
                 "overwrite": CM["overwrite_naming"]
@@ -462,6 +494,12 @@ def _load_session(json_path, input_name):
             int(ch): tuple(map(int, shift))
             for ch, shift in data["layout"]["shift"].items()
         }
+        CM["shift_layout_z"] = {}
+        if "shift_z" in data["layout"]:  # Backward compatibility
+            CM["shift_layout_z"] = {
+                int(ch): int(shift_z)
+                for ch, shift_z in data["layout"]["shift_z"].items()
+            }
         CM.update("input_naming", data["layout"]["naming"]["template"])
         CM["overwrite_naming"] = {
             int(ch): value
@@ -1000,6 +1038,7 @@ def monitor_device(_=None):
 
     ui.timer(0.2, _check_error)
 
+
 def _save_notes():
     """Update notes."""
     name = CM["input_name"].value.strip()
@@ -1131,6 +1170,7 @@ def _initialize_session_ui(e):
                 with MyUI.row():
                     # Shift: Define at beginning to void null reference
                     CM["shift_layout"] = {}  # Data
+                    CM["shift_layout_z"] = {}  # Data
                     CM["overwrite_naming"] = {}  # Data
 
                     # Method
@@ -1196,12 +1236,13 @@ def _initialize_session_ui(e):
                             {'name': 'y', 'label': 'Y (cm)', 'field': 'y', 'align': 'left'},
                             {'name': 'dx', 'label': 'Shift X (cm)', 'field': 'dx', 'align': 'left'},
                             {'name': 'dy', 'label': 'Shift Y (cm)', 'field': 'dy', 'align': 'left'},
+                            {'name': 'dz', 'label': 'Shift Z (cm)', 'field': 'dz', 'align': 'left'},
                             {'name': 'naming', 'label': 'Naming', 'field': 'naming', 'align': 'left'},
                         ],
                         rows=[],
                         row_key='channel',
                         pagination=8,
-                    ).classes('flex-[4] q-table--col-auto-width')
+                    ).classes('flex-[5] q-table--col-auto-width')
 
                     # Callback of numbers in table
                     CM["table_layout"].add_slot('body-cell-dx', r'''
@@ -1233,6 +1274,22 @@ def _initialize_session_ui(e):
                     ''')
                     CM["table_layout"].on('_on_change_shift', _on_change_shift)
                     CM["table_layout"].on('_on_blur_shift', _on_blur_shift)
+
+                    CM["table_layout"].add_slot('body-cell-dz', r'''
+                        <q-td key="dz" :props="props">
+                            <q-input
+                                dense
+                                type="number"
+                                class="w-full max-w-[80px]"
+                                v-model.number="props.row.dz"
+                                :readonly="props.row.lock_shift"
+                                @update:model-value="() => $parent.$emit('_on_change_shift_z', props.row)"
+                                @blur="() => $parent.$emit('_on_blur_shift_z', props.row)"
+                            />
+                        </q-td>
+                    ''')
+                    CM["table_layout"].on('_on_change_shift_z', _on_change_shift_z)
+                    CM["table_layout"].on('_on_blur_shift_z', _on_blur_shift_z)
 
                     CM["table_layout"].add_slot('body-cell-naming', r'''
                         <q-td key="naming" :props="props">
