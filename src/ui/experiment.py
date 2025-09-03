@@ -548,7 +548,7 @@ def _save_post_notes():
         ui.notify(f'Failed to save {json_path}: {e}', color='negative')
 
 
-def _load_experiment(json_path, experiment_number, post_notes=True):
+def _load_experiment(json_path, experiment_number, keep_notes=True):
     """Load experiment from json"""
     with open(json_path, "r") as fs:
         data = json.load(fs)
@@ -572,9 +572,11 @@ def _load_experiment(json_path, experiment_number, post_notes=True):
 
         # Notes and time
         CM.update("input_pre_notes", data["pre_notes"])
-        if post_notes:  # Post notes likely not shared across experiments
+        if keep_notes:  # Notes likely not shared across experiments
+            CM.update("input_pre_notes", data["pre_notes"])
             CM.update("input_post_notes", data["post_notes"])
         else:
+            CM.update("input_pre_notes", "")
             CM.update("input_post_notes", "")
         CM.update("input_time", data["create_time"])
 
@@ -590,18 +592,18 @@ def _restore_for_new():
     try:
         # First, try previous
         json_path = session_folder / _number_to_dir(current_number - 1) / "experiment_state.json"
-        _load_experiment(json_path, experiment_number=current_number, post_notes=False)
+        _load_experiment(json_path, experiment_number=current_number, keep_notes=False)
         from_previous = True
     except Exception as e:  # noqa
         try:
             # First, try last
             json_path = session_folder / _number_to_dir(CM["last_selection"]) / "experiment_state.json"
-            _load_experiment(json_path, experiment_number=current_number, post_notes=False)
+            _load_experiment(json_path, experiment_number=current_number, keep_notes=False)
             from_previous = False
         except Exception as e:  # noqa
             # Finally, fall back to default
             _load_experiment("src/ui/defaults/default_experiment.json",
-                             experiment_number=current_number, post_notes=False)
+                             experiment_number=current_number, keep_notes=False)
             from_previous = False
 
     # Manually refresh
