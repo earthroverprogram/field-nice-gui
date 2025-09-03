@@ -502,7 +502,8 @@ def _save_experiment_meta(now):
         "number": int(CM["number_experiment"].value),
         "source_location": {
             "x": int(CM["number_x"].value),
-            "y": int(CM["number_y"].value)
+            "y": int(CM["number_y"].value),
+            "z": int(CM["number_z"].value)
         },
         "gain": {
             "template": CM["select_gain"].value,
@@ -558,6 +559,8 @@ def _load_experiment(json_path, experiment_number, post_notes=True):
         # Source location
         CM.update("number_x", data["source_location"]["x"])
         CM.update("number_y", data["source_location"]["y"])
+        if "z" in data["source_location"]:
+            CM.update("number_z", data["source_location"]["z"])
 
         # Gain
         CM.update("select_gain", data["gain"]["template"])
@@ -656,7 +659,7 @@ def _on_change_experiment_number(_=None):
     is_new = _is_new()
 
     # 1. Set all field readonly states based on selection
-    for key in ["number_x", "number_y",
+    for key in ["number_x", "number_y", "number_z",
                 "select_gain",
                 "select_excitation", "select_direction", "select_coupling", "number_repeats",
                 "input_pre_notes"]:
@@ -1186,6 +1189,7 @@ def _initialize_experiment_ui(_=None):
                                                      on_change=_on_change_source_location, full=False)
                     CM["number_y"] = MyUI.number_int("Location Y (cm)", value=0,
                                                      on_change=_on_change_source_location, full=False)
+                    CM["number_z"] = MyUI.number_int("Location Z (cm)", value=0, full=False)
 
             #########
             # Notes #
