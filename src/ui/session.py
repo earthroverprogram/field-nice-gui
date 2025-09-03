@@ -445,6 +445,10 @@ async def _save_session(_=None):
             "crop": CM["select_crop"].value,
             "cultivation": CM["select_cultivation"].value,
         },
+        "gps_location": {
+            "latitude": CM["number_lat"].value,
+            "longitude": CM["number_lon"].value,
+        },
         "operators": {
             "computer": CM["input_computer_op"].value,
             "source": CM["input_source_op"].value,
@@ -541,6 +545,11 @@ def _load_session(json_path, input_name):
         CM.update("select_agriculture", data["soil"]["agriculture"], add_value_to_options=True)
         CM.update("select_crop", data["soil"]["crop"], add_value_to_options=True)
         CM.update("select_cultivation", data["soil"]["cultivation"], add_value_to_options=True)
+
+        # GPS location
+        if "gps_location" in data:
+            CM.update("number_lat", data["gps_location"]["latitude"])
+            CM.update("number_lon", data["gps_location"]["longitude"])
 
         # Operators
         CM.update("input_computer_op", data["operators"]["computer"])
@@ -645,6 +654,7 @@ def _on_change_select_session(_=None):
                 "select_weather", "select_temperature",
                 "select_moisture", "select_texture", "select_order",
                 "select_agriculture", "select_crop", "select_cultivation",
+                "number_lat", "number_lon",
                 "input_computer_op", "input_source_op", "input_protocol_op", "input_others_op"]:
         CM.update(key, props="readonly", props_remove=is_new)
     CM.update("code_custom", props="disable", props_remove=is_new)
@@ -1435,10 +1445,10 @@ def _initialize_session_ui(e):
                     _create_static_options("crop", "Crop Type")
                     _create_static_options("cultivation", "Cultivation Method")
 
-        #############
-        # Operators #
-        #############
         with MyUI.row():
+            ################
+            # GPS Location #
+            ################
             with MyUI.cap_card("GPS Location", full=False) as card:
                 card.classes("flex-[1]")
                 with MyUI.row():
@@ -1452,6 +1462,9 @@ def _initialize_session_ui(e):
                         min=-180, max=180, step=0.01, format='%.2f'
                     ).classes('flex-1')
 
+            #############
+            # Operators #
+            #############
             with MyUI.cap_card("Operators", full=False) as card:
                 card.classes("flex-[2]")
                 with MyUI.row():
