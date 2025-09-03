@@ -10,8 +10,8 @@ from nicegui import ui
 
 from src.device.datalogger import Datalogger, DUMMY_SR
 from src.ui import GS, DATA_DIR
-from src.ui.utils import ControlManager, get_existing_sorted, MyPlot, MyUI, CallbackBlocker
 from src.ui.lics import get_latlon
+from src.ui.utils import ControlManager, get_existing_sorted, MyPlot, MyUI, CallbackBlocker
 
 # --- UI Control Registry ---
 CM = ControlManager()
