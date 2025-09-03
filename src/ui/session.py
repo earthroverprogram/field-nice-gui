@@ -550,6 +550,10 @@ def _load_session(json_path, input_name):
         if "gps_location" in data:
             CM.update("number_lat", data["gps_location"]["latitude"])
             CM.update("number_lon", data["gps_location"]["longitude"])
+        else:
+            lat, lon = get_latlon()
+            CM.update("number_lat", lat)
+            CM.update("number_lon", lon)
 
         # Operators
         CM.update("input_computer_op", data["operators"]["computer"])
