@@ -4,12 +4,12 @@ import base64
 import matplotlib.pyplot as plt
 from nicegui import ui
 
-from src.ui import GS
+from src.ui import GS, HELPS
 from src.ui.about import initialize as about_initialize
 from src.ui.experiment import initialize as experiment_initialize
 from src.ui.lics import initialize as lics_initialize
 from src.ui.session import initialize as session_initialize
-from src.ui.utils import MyUI
+from src.ui.utils import MyUI, show_help
 
 # from src.ui.view import initialize as view_initialize
 
@@ -73,22 +73,35 @@ ui.add_head_html('''
 </style>
 ''' % MyUI.gray_color())
 
+
 # ------------------------
 # Main tab bar (centered)
 # ------------------------
+
+def tab_with_help(name: str, icon: str, help_title: str, help_text: str, _tabs):
+    with ui.row().classes('w-48 relative justify-center'):
+        tab = ui.tab(name, icon=icon).classes('w-full')
+        btn = ui.button(icon='help_outline',
+                        on_click=lambda: show_help(help_title, help_text)
+                        ).props('flat round size=sm dense').classes(
+            'absolute bottom-[9px] right-[5px]'
+        )
+        btn.bind_visibility_from(_tabs, 'value', value=name)
+    return tab
+
+
+# --- Main tab bar ---
 with ui.row().classes('justify-center w-full'):
     with ui.tabs() as tabs:
-        t1 = ui.tab('LICS', icon='grass').classes('w-48')
-        t2 = ui.tab('SESSION', icon='grain').classes('w-48')
-        t3 = ui.tab('EXPERIMENT', icon='gavel').classes('w-48')
-        # t4 = ui.tab('VIEW', icon='troubleshoot').classes('w-48')
+        t1 = tab_with_help('LICS', 'grass', 'LICS', HELPS["lics"], tabs)
+        t2 = tab_with_help('SESSION', 'grain', 'SESSION', HELPS["session"], tabs)
+        t3 = tab_with_help('EXPERIMENT', 'gavel', 'EXPERIMENT', HELPS["experiment"], tabs)
         t5 = ui.tab('ABOUT', icon='info_outline').classes('w-48')
-tabs.value = t1
 
 # ------------------------
 # Tab panels and content
 # ------------------------
-with ui.tab_panels(tabs, value=t1).classes('w-full'):
+with ui.tab_panels(tabs, value="LICS").classes('w-full'):
     with ui.tab_panel(t1):
         lics_initialize()
     with ui.tab_panel(t2):

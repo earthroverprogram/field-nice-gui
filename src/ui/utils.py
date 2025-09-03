@@ -322,7 +322,7 @@ class ThreeImageViewer:
             self.right_icon.style('visibility: hidden')
 
 
-def _detect_snuffler():
+def detect_snuffler():
     """
     Cross-platform detection of Snuffler executable.
     """
@@ -366,3 +366,12 @@ def _detect_snuffler():
 
     # Step 4: Fallback
     return exe_name
+
+
+def show_help(title: str, text: str):
+    """Show help message"""
+    with ui.dialog() as dialog, ui.card():
+        ui.label(title).classes('text-xl font-bold mb-2')
+        ui.markdown(text).classes('max-w-lg')
+        ui.button('Close', on_click=dialog.close).classes('mt-4')
+    dialog.open()

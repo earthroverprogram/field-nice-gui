@@ -34,3 +34,7 @@ if config_path.exists():
     if "data_dir" in config:
         DATA_DIR = Path(config["data_dir"]).expanduser().resolve()
 DATA_DIR.mkdir(exist_ok=True)  # Ensure the data directory exists
+
+# Help messages
+with open("src/ui/defaults/helps.json", "r", encoding="utf-8") as f:
+    HELPS = json.load(f)

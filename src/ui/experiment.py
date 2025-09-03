@@ -20,9 +20,9 @@ from obspy import Stream, Trace, UTCDateTime
 import tempfile
 import subprocess
 from src.device.datalogger import Datalogger
-from src.ui import GS, DATA_DIR
+from src.ui import GS, DATA_DIR, HELPS
 from src.ui.session import get_session_dict, monitor_device, refresh_device
-from src.ui.utils import ControlManager, MyPlot, MyUI, CallbackBlocker, ThreeImageViewer, _detect_snuffler
+from src.ui.utils import ControlManager, MyPlot, MyUI, CallbackBlocker, ThreeImageViewer, detect_snuffler, show_help
 
 # --- UI Control Registry ---
 CM = ControlManager()
@@ -1056,7 +1056,7 @@ def _on_change_edit_snuffler(_=None):
     if (CM["input_path_snuffler"].value.endswith("snuffler") or
             CM["input_path_snuffler"].value.endswith("snuffler.exe")):
         return
-    CM["input_path_snuffler"].value = _detect_snuffler()
+    CM["input_path_snuffler"].value = detect_snuffler()
 
 
 def _set_preamp_gain_evo16():
@@ -1429,10 +1429,14 @@ def _initialize_experiment_ui(_=None):
             # Snuffler
             with MyUI.row().classes("items-center w-full"):
                 ui.input().classes("flex-1").style('visibility: hidden')
+                ui.button(icon='help_outline',
+                          on_click=lambda: show_help("Snuffler", HELPS["snuffler"])
+                          ).props('flat round size=sm dense')
                 with ui.row().classes("w-1/4 justify-center"):
                     CM["button_snuffler"] = ui.button("View in Snuffler", on_click=_view_in_snuffler) \
                         .classes('text-white font-semibold h-14 w-full')
-                CM["input_path_snuffler"] = ui.input("Full Path to Snuffler", value=_detect_snuffler()) \
+                ui.button(icon='help_outline').props('flat round size=sm dense').style('visibility: hidden')
+                CM["input_path_snuffler"] = ui.input("Full Path to Snuffler", value=detect_snuffler()) \
                     .classes('flex-1').on("blur", _on_change_edit_snuffler)
 
     # Safe call
