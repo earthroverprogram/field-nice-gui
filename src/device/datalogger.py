@@ -271,8 +271,6 @@ class Datalogger:
 
         def callback(indata, frames, time_info, status):  # noqa
             try:
-                if self.stop_flag:
-                    raise sd.CallbackStop()
                 selected = indata[:, self.active_channels].copy()
                 if self.mode == 'record':
                     self.buffer.append(selected)
@@ -297,9 +295,23 @@ class Datalogger:
         return threading.Thread(target=self._stream_runner)
 
     def stop_streaming(self):
+        """Stop recording/monitoring and return recorded data."""
         self.stop_flag = True
+        if self.stream:
+            try:
+                self.stream.abort()
+            except:  # noqa
+                pass
+            try:
+                self.stream.close()
+            except:  # noqa
+                pass
+            self.stream = None
+
         if self.thread:
-            self.thread.join()
+            self.thread.join(timeout=1.0)
+            if self.thread.is_alive():
+                print("Warning: stream thread did not exit cleanly")
             self.thread = None
 
         if self.mode == 'record' and self.buffer:
