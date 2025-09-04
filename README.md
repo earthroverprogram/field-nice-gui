@@ -58,6 +58,9 @@ pip install -r requirements.txt
 
 ---
 
+## ⚙️ Config the App
+You can edit `data_dir` in `config.json` to separate data and code folders.
+
 ## ▶️ Run the App
 
 Make sure you are in the correct environment and inside the `field-nice-gui` folder.  
