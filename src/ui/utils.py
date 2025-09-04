@@ -289,9 +289,11 @@ class ThreeImageViewer:
                 transform-origin: left;
                 opacity: 0.7;
             ''').classes(f'flex-[{ratio[0]}]').props('fit=contain')
-            self.left_icon = ui.icon('chevron_left') \
-                .classes('absolute left-2 top-1/2 -translate-y-1/2 '
-                         'text-6xl pointer-events-none text-primary')
+
+            self.left_icon = ui.label('chevron_left').classes(
+                'absolute left-2 top-1/2 -translate-y-1/2 '
+                'text-8xl text-primary cursor-pointer material-icons'
+            )
 
             self.middle_img = ui.image('').style('''
                 width: 100%; height: 100%;
@@ -303,9 +305,11 @@ class ThreeImageViewer:
                 transform-origin: right;
                 opacity: 0.7;
             ''').classes(f'flex-[{ratio[2]}]').props('fit=contain')
-            self.right_icon = ui.icon('chevron_right') \
-                .classes('absolute right-2 top-1/2 -translate-y-1/2 '
-                         'text-6xl pointer-events-none text-primary')
+
+            self.right_icon = ui.label('chevron_right').classes(
+                'absolute right-2 top-1/2 -translate-y-1/2 '
+                'text-8xl text-primary cursor-pointer material-icons'
+            )
 
     def set_images(self, left, middle, right, fallbacks, number, number_min, number_max):
         """Set image sources. If a path doesn't exist, fallbacks are used."""

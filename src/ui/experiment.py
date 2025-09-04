@@ -926,8 +926,6 @@ async def _record():
         CM["progress"].set_value(0.0)
         CM["button_next"].props(remove="disable")
         CM["button_prev"].props(remove="disable")
-        CM["previewer"].left_img.on("click", _go_previous)
-        CM["previewer"].right_img.on("click", _go_next)
         CM["previewer"].left_icon.style('visibility: visible')
         CM["previewer"].right_icon.style('visibility: visible')
         CM["display_countdown"].style("display: none;")
@@ -940,8 +938,6 @@ async def _record():
         CM["progress"].set_value(0.0)
         CM["button_next"].props("disable")
         CM["button_prev"].props("disable")
-        CM["previewer"].left_img.on("click", None)
-        CM["previewer"].right_img.on("click", None)
         CM["previewer"].left_icon.style('visibility: hidden')
         CM["previewer"].right_icon.style('visibility: hidden')
         CM["datalogger"].start_recording()  # thread already prepared
@@ -1004,6 +1000,10 @@ async def _record():
     CM["display_countdown_label"].classes(remove="text-[50px]")
     CM["display_countdown_label"].classes(add="text-[200px]")
     if CM["checkbox_countdown"].value:
+        CM["button_next"].props("disable")
+        CM["button_prev"].props("disable")
+        CM["previewer"].left_icon.style('visibility: hidden')
+        CM["previewer"].right_icon.style('visibility: hidden')
         if CM['select_voice'].value != "<Silent>":
             CM["audio_countdown"].set_source(f"assets/countdown/{CM['select_voice'].value}.mp3")
             CM["audio_countdown"].play()
@@ -1447,8 +1447,8 @@ def _initialize_experiment_ui(_=None):
         # Preview
         with MyUI.expansion("Output Preview", value=True).classes("w-full"):
             CM["previewer"] = ThreeImageViewer()
-            CM["previewer"].left_img.on("click", _go_previous)
-            CM["previewer"].right_img.on("click", _go_next)
+            CM["previewer"].left_icon.on("click", _go_previous)
+            CM["previewer"].right_icon.on("click", _go_next)
 
             # Snuffler
             with MyUI.row().classes("items-center w-full"):
