@@ -1056,6 +1056,8 @@ def monitor_device(_=None):
 
 def _save_notes():
     """Update notes."""
+    if _is_new():
+        return
     name = CM["input_name"].value.strip()
     lics = CM["select_lics"].value
     folder = DATA_DIR / lics / name

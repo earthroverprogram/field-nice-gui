@@ -271,6 +271,8 @@ def _fill_lat_lon():
 
 def _save_notes():
     """Update notes."""
+    if _is_new():
+        return
     name = CM["input_name"].value.strip()
     folder = DATA_DIR / name
     json_path = folder / "lics_state.json"
