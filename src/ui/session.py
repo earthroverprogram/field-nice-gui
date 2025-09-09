@@ -903,8 +903,12 @@ def monitor_device(_=None):
     datalogger = Datalogger()
 
     def _close_and_stop():
-        """Stop stream and close dialog."""
+        """Stop stream, cancel timer, and close dialog."""
         datalogger.stop_streaming()
+        try:
+            err_timer.cancel()
+        except:  # noqa
+            pass
         dlg.close()
 
     # Dialog and controls
@@ -1051,7 +1055,7 @@ def monitor_device(_=None):
                 warned_messages.add(msg)
             datalogger.last_exception = None
 
-    ui.timer(0.2, _check_error)
+    err_timer = ui.timer(0.2, _check_error)
 
 
 def _save_notes():

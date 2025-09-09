@@ -295,25 +295,28 @@ class Datalogger:
         return threading.Thread(target=self._stream_runner)
 
     def stop_streaming(self):
-        """Stop recording/monitoring and return recorded data."""
-        self.stop_flag = True
-        if self.stream:
-            try:
-                self.stream.abort()
-            except:  # noqa
-                pass
-            try:
-                self.stream.close()
-            except:  # noqa
-                pass
-            self.stream = None
+        """Signal the background thread to stop and wait for it to exit.
 
+        IMPORTANT:
+        - Do NOT call abort()/close() on the PortAudio stream here because the stream
+          context is owned by the background thread (_stream_runner). Closing from a
+          different thread can trigger AUHAL err=-50 on macOS and/or double-close.
+        """
+        self.stop_flag = True
+
+        # Join the background thread so `_stream_runner` can exit its `with self.stream:`
+        # cleanly and close the stream from the same thread that opened it.
         if self.thread:
-            self.thread.join(timeout=1.0)
+            self.thread.join(timeout=1.5)
             if self.thread.is_alive():
                 print("Warning: stream thread did not exit cleanly")
             self.thread = None
 
+        # At this point, the stream context should already be closed by `_stream_runner`.
+        # Ensure we drop the reference to avoid accidental reuse.
+        self.stream = None
+
+        # If we were recording, consolidate buffered blocks into the full data array.
         if self.mode == 'record' and self.buffer:
             recorded = np.concatenate(self.buffer, axis=0)
             n_samples = recorded.shape[0]
@@ -359,7 +362,23 @@ class Datalogger:
     def _stream_runner(self):
         """
         Background runner for the audio stream.
+        Owns the stream context: open, keep alive, and close on exit.
         """
-        with self.stream:
-            while not self.stop_flag:
-                sd.sleep(100)
+        try:
+            with self.stream:
+                while not self.stop_flag:
+                    sd.sleep(100)
+        finally:
+            # Ensure the stream is closed from this same thread.
+            # The `with` context should already have closed it, but this guards against
+            # partial initialization or exceptions before entering the context.
+            try:
+                if self.stream is not None:
+                    # Avoid calling .abort()/.close() from other threads.
+                    # .close() here is idempotent and safe if already closed by context.
+                    try:
+                        self.stream.close()
+                    except:  # noqa
+                        pass
+            finally:
+                self.stream = None

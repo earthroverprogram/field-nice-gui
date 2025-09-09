@@ -940,11 +940,20 @@ async def _record():
         CM["button_prev"].props("disable")
         CM["previewer"].left_icon.style('visibility: hidden')
         CM["previewer"].right_icon.style('visibility: hidden')
-        CM["datalogger"].start_recording()  # thread already prepared
 
-    # If currently recording: STOP
+    async def _really_start_record():
+        await asyncio.to_thread(CM["datalogger"].start_recording)
+
+    # If currently recording: STOP (user pressed the button)
     if CM["is_recording"]:
-        data = CM["datalogger"].stop_streaming()
+        # prevent double-clicks while stopping
+        CM["button_record"].props("disable")
+        try:
+            data = await asyncio.to_thread(CM["datalogger"].stop_streaming)
+        except Exception as e:
+            ui.notify(f"Failed to stop recording: {e}", color="negative")
+            await _reset_ui()
+            return
         _save_data(data)
         await _reset_ui()
         return
@@ -1016,6 +1025,7 @@ async def _record():
     CM["display_countdown_label"].text = "Go!"
     try:
         _start_record()
+        await _really_start_record()
     except Exception as e:
         ui.notify(f"Failed to start recording: {e}", color='negative')
         await _reset_ui()
@@ -1046,7 +1056,13 @@ async def _record():
 
     # If not manually stopped, stop now (duration reached)
     if CM["is_recording"]:
-        data = CM["datalogger"].stop_streaming()
+        CM["button_record"].props("disable")
+        try:
+            data = await asyncio.to_thread(CM["datalogger"].stop_streaming)
+        except Exception as e:
+            ui.notify(f"Failed to stop recording: {e}", color="negative")
+            await _reset_ui()
+            return
         _save_data(data)
         await _reset_ui()
 
