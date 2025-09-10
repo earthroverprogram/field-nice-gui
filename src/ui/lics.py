@@ -1,4 +1,5 @@
 import json
+import uuid
 from datetime import datetime
 
 import requests
@@ -87,7 +88,8 @@ async def _save_lics(_=None):
             "heading": CM["number_heading"].value,
         },
         "notes": CM["input_notes"].value.strip(),
-        "create_time": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        "create_time": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        "uuid": uuid.uuid4().hex[:16]
     }
 
     # --- Write to JSON file ---
@@ -291,7 +293,8 @@ def _save_notes():
         ui.notify(f'Failed to save {json_path}: {e}', color='negative')
 
 
-def get_latlon():
+def get_lics_latlon():
+    """Get lat, lon for Session."""
     try:
         name = CM["select_lics"].value
         json_path = DATA_DIR / name / "lics_state.json"
@@ -300,6 +303,18 @@ def get_latlon():
         return data["origin"]["lat"], data["origin"]["lon"]
     except:  # noqa
         return 0., 0.
+
+
+def get_lics_uuid():
+    """Get uuid for Session."""
+    try:
+        name = CM["select_lics"].value
+        json_path = DATA_DIR / name / "lics_state.json"
+        with open(json_path, "r") as f:
+            data = json.load(f)
+        return data["uuid"]
+    except:  # noqa
+        return ""
 
 
 ###########################

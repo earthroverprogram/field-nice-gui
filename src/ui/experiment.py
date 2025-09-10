@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import time
+import uuid
 import warnings
 from types import SimpleNamespace
 
@@ -21,7 +22,7 @@ import tempfile
 import subprocess
 from src.device.datalogger import Datalogger
 from src.ui import GS, DATA_DIR, HELPS
-from src.ui.session import get_session_dict, monitor_device, refresh_device, get_receiver_z
+from src.ui.session import get_session_dict, monitor_device, refresh_device, get_receiver_z, get_session_uuid
 from src.ui.utils import ControlManager, MyPlot, MyUI, CallbackBlocker, ThreeImageViewer, detect_snuffler, show_help
 
 # --- UI Control Registry ---
@@ -515,7 +516,8 @@ def _save_experiment_meta(now):
         },
         "pre_notes": CM["input_pre_notes"].value.strip(),
         "post_notes": CM["input_post_notes"].value.strip(),
-        "create_time": now.strftime("%Y-%m-%dT%H:%M:%S")
+        "create_time": now.strftime("%Y-%m-%dT%H:%M:%S"),
+        "uuid": get_session_uuid() + "-" + uuid.uuid4().hex[:16]
     }
 
     # --- Write to JSON file ---

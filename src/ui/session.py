@@ -1,6 +1,7 @@
 import json
 import re
 import time
+import uuid
 import warnings
 from datetime import datetime
 from types import SimpleNamespace
@@ -10,7 +11,7 @@ from nicegui import ui
 
 from src.device.datalogger import Datalogger, DUMMY_SR
 from src.ui import GS, DATA_DIR
-from src.ui.lics import get_latlon
+from src.ui.lics import get_lics_uuid, get_lics_latlon
 from src.ui.utils import ControlManager, get_existing_sorted, MyPlot, MyUI, CallbackBlocker
 
 # --- UI Control Registry ---
@@ -456,7 +457,8 @@ async def _save_session(_=None):
             "others": CM["input_others_op"].value
         },
         "notes": CM["input_notes"].value.strip(),
-        "create_time": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        "create_time": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        "uuid": get_lics_uuid() + "-" + uuid.uuid4().hex[:16]
     }
 
     # --- Write to JSON file ---
@@ -551,7 +553,7 @@ def _load_session(json_path, input_name):
             CM.update("number_lat", data["gps_location"]["latitude"])
             CM.update("number_lon", data["gps_location"]["longitude"])
         else:
-            lat, lon = get_latlon()
+            lat, lon = get_lics_latlon()
             CM.update("number_lat", lat)
             CM.update("number_lon", lon)
 
@@ -1126,6 +1128,20 @@ def get_session_dict():
     }
 
 
+def get_session_uuid():
+    """Get uuid for Experiment."""
+    try:
+        name = CM["input_name"].value.strip()
+        lics = CM["select_lics"].value
+        folder = DATA_DIR / lics / name
+        json_path = folder / "session_state.json"
+        with open(json_path, "r") as f:
+            data = json.load(f)
+        return data["uuid"]
+    except:  # noqa
+        return ""
+
+
 def get_receiver_z():
     """Get the Z coordinates"""
     layout = _compute_layout()
@@ -1462,7 +1478,7 @@ def _initialize_session_ui(e):
             with MyUI.cap_card("GPS Location", full=False) as card:
                 card.classes("flex-[1]")
                 with MyUI.row():
-                    lat, lon = get_latlon()
+                    lat, lon = get_lics_latlon()
                     CM["number_lat"] = ui.number(
                         "Latitude", value=lat,
                         min=-90, max=90, step=0.01, format='%.2f'
