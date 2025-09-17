@@ -909,12 +909,23 @@ def _save_data(data: np.ndarray):
              f"{row['x']:d}",
              f"{row['y']:d}",
              f"{z:d}",
+             f"{row['gain']:f}",
              ]
             for row, naming, z in zip(CM["table_summary"].rows, naming_dict.values(), zs)
         ]
-        np.savetxt(folder / "receiver_location.txt", stations, fmt="%s")
+        np.savetxt(folder / "receiver_location.txt", stations, fmt="%s", header="Name X Y Z Gain")
     except Exception as e:
         ui.notify(f"Failed to save receiver location: {e}", color='negative')
+
+    # Step 8: Save source location
+    try:
+        np.savetxt(folder / "source_location.txt", np.array([
+            int(CM["number_x"].value),
+            int(CM["number_y"].value),
+            int(CM["number_z"].value)
+        ])[None, :], fmt="%s", header="X Y Z")
+    except Exception as e:
+        ui.notify(f"Failed to save source location: {e}", color='negative')
 
 
 async def _record():
