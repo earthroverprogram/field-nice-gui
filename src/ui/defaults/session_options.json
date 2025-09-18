@@ -38,7 +38,8 @@
     "Windy",
     "Foggy",
     "Mist",
-    "Hazy"
+    "Hazy",
+    "Not Relevant"
   ],
   "temperature": [
     "Freezing",
@@ -48,73 +49,7 @@
     "Warm",
     "Hot",
     "Scorching",
-    "__°C"
-  ],
-  "moisture": [
-    "Dry",
-    "Moist",
-    "Wet"
-  ],
-  "texture": [
-    "Sand",
-    "Loamy Sand",
-    "Sandy Loam",
-    "Loam",
-    "Silt Loam",
-    "Silt",
-    "Sandy Clay Loam",
-    "Clay Loam",
-    "Silty Clay Loam",
-    "Sandy Clay",
-    "Silty Clay",
-    "Clay"
-  ],
-  "order": [
-    "Alfisol",
-    "Andosol",
-    "Aridisol",
-    "Entisol",
-    "Gelisol",
-    "Histosol",
-    "Inceptisol",
-    "Mollisol",
-    "Oxisol",
-    "Spodosol",
-    "Ultisol",
-    "Vertisol"
-  ],
-  "agriculture": [
-    "None",
-    "Conventional",
-    "Organic",
-    "Agroforestry",
-    "Pasture",
-    "Woodland",
-    "Conservation Agriculture",
-    "Regenerative Agriculture",
-    "Rewilding",
-    "Rotation",
-    "Experimental"
-  ],
-  "crop": [
-    "None",
-    "Cereal",
-    "Legume",
-    "Root Crop",
-    "Fruit Crop",
-    "Forage",
-    "Cover Crop",
-    "Alley Crop"
-  ],
-  "cultivation": [
-    "None",
-    "Tillage",
-    "Reduced Tillage",
-    "Zero Tillage",
-    "Manual",
-    "Mulching",
-    "Cover Cropping",
-    "Contour Plowing",
-    "Terracing"
+    "__°C",
+    "Not Relevant"
   ]
 }

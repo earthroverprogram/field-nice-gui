@@ -16,6 +16,7 @@
       "code": "def custom_layout():\n    \"\"\"Python function to generate user-defined layout.\"\"\"\n    import numpy as np  # Must import numpy within function\n    theta = np.linspace(0, 2 * np.pi, 12, endpoint=False)\n    x = np.cos(theta) * 100\n    y = np.sin(theta) * 100\n    return np.stack([x, y], axis=1)  # Must return an (N, 2) array\n"
     },
     "shift": {},
+    "shift_z": {},
     "naming": {
       "template": "FX.LOM{CH:02d}.Z",
       "overwrite": {}
@@ -30,7 +31,7 @@
   },
   "datalogger": {
     "device": "Dummy",
-    "datatype": "Float32",
+    "datatype": "float32",
     "device_samplerate": 44100,
     "result_samplerate": 10000,
     "duration": 5
@@ -46,12 +47,24 @@
     "temperature": "Unknown"
   },
   "soil": {
-    "order": "Unknown",
     "moisture": "Unknown",
     "texture": "Unknown",
-    "agriculture": "Unknown",
-    "crop": "Unknown",
-    "cultivation": "Unknown"
+    "usda_soil_order": "Not Relevant",
+    "wrb_soil_group": "Not Relevant",
+    "agriculture_system": "Not Relevant",
+    "cultivation_method": "Not Relevant",
+    "plot_area_size": "Not Relevant",
+    "tree_height_maturity": "Not Relevant",
+    "sign_of_grazing": "Not Relevant",
+    "sign_of_ploughing": "Not Relevant",
+    "cover_of_residual_crop": "Not Relevant",
+    "cover_of_stones": "Not Relevant",
+    "water_management_(wm)": "Not Relevant",
+    "wm_irrigation_source": "Not Relevant",
+    "wm_irrigation_type": "Not Relevant",
+    "wm_delivery": "Not Relevant",
+    "lucas_land_cover": "[Z] Not Relevant",
+    "lucas_land_use": "[Z] Not Relevant"
   },
   "operators": {
     "computer": "",
@@ -60,5 +73,6 @@
     "others": ""
   },
   "notes": "A Session example.",
-  "create_time": "2025-07-14T05:31:43"
+  "create_time": "2025-09-18T23:14:51",
+  "uuid": "fc08411263674d9f-bdf7cc33ad444ac3"
 }

@@ -28,6 +28,8 @@ CBB = CallbackBlocker()
 # Options
 with open("src/ui/defaults/session_options.json", "r", encoding="utf-8") as f:
     SESSION_OPTIONS = json.load(f)
+with open("src/ui/defaults/session_options_soil.json", "r", encoding="utf-8") as f:
+    SESSION_OPTIONS_SOIL = json.load(f)
 
 # Default layout code
 DEFAULT_LAYOUT_CODE = '''def custom_layout():
@@ -434,21 +436,17 @@ async def _save_session(_=None):
             "coupling": CM["select_coupling"].value,
             "repeats": int(CM["number_repeats"].value)
         },
+        "gps_location": {
+            "latitude": CM["number_lat"].value,
+            "longitude": CM["number_lon"].value,
+        },
         "on_site": {
             "weather": CM["select_weather"].value,
             "temperature": CM["select_temperature"].value,
         },
         "soil": {
-            "order": CM["select_order"].value,
-            "moisture": CM["select_moisture"].value,
-            "texture": CM["select_texture"].value,
-            "agriculture": CM["select_agriculture"].value,
-            "crop": CM["select_crop"].value,
-            "cultivation": CM["select_cultivation"].value,
-        },
-        "gps_location": {
-            "latitude": CM["number_lat"].value,
-            "longitude": CM["number_lon"].value,
+            key.replace(" ", "_").lower(): CM[f"select_{key}"].value
+            for key in list(SESSION_OPTIONS_SOIL.keys())
         },
         "operators": {
             "computer": CM["input_computer_op"].value,
@@ -536,18 +534,6 @@ def _load_session(json_path, input_name):
         CM.update("select_coupling", data["source"]["coupling"])
         CM.update("number_repeats", data["source"]["repeats"])
 
-        # Conditions
-        CM.update("select_weather", data["on_site"]["weather"], add_value_to_options=True)
-        CM.update("select_temperature", data["on_site"]["temperature"], add_value_to_options=True)
-
-        # Soil description
-        CM.update("select_moisture", data["soil"]["moisture"], add_value_to_options=True)
-        CM.update("select_texture", data["soil"]["texture"], add_value_to_options=True)
-        CM.update("select_order", data["soil"]["order"], add_value_to_options=True)
-        CM.update("select_agriculture", data["soil"]["agriculture"], add_value_to_options=True)
-        CM.update("select_crop", data["soil"]["crop"], add_value_to_options=True)
-        CM.update("select_cultivation", data["soil"]["cultivation"], add_value_to_options=True)
-
         # GPS location
         if "gps_location" in data:
             CM.update("number_lat", data["gps_location"]["latitude"])
@@ -556,6 +542,21 @@ def _load_session(json_path, input_name):
             lat, lon = get_lics_latlon()
             CM.update("number_lat", lat)
             CM.update("number_lon", lon)
+
+        # Conditions
+        CM.update("select_weather", data["on_site"]["weather"], add_value_to_options=True)
+        CM.update("select_temperature", data["on_site"]["temperature"], add_value_to_options=True)
+
+        # Soil description
+        for key in SESSION_OPTIONS_SOIL.keys():
+            key_var = key.replace(" ", "_").lower()
+            initial = "Not Relevant"
+            sort_options = False
+            if key in ["LUCAS Land Cover", "LUCAS Land Use"]:
+                initial = "[Z] Not Relevant"
+                sort_options = True
+            CM.update(f"select_{key}", data["soil"].get(key_var, initial),
+                      add_value_to_options=True, sort_options=sort_options)
 
         # Operators
         CM.update("input_computer_op", data["operators"]["computer"])
@@ -658,10 +659,9 @@ def _on_change_select_session(_=None):
                 "select_excitation", "select_direction", "select_coupling", "number_repeats",
                 "number_st_x", "number_st_y", "number_st_ch", "input_st_naming",
                 "select_weather", "select_temperature",
-                "select_moisture", "select_texture", "select_order",
-                "select_agriculture", "select_crop", "select_cultivation",
                 "number_lat", "number_lon",
-                "input_computer_op", "input_source_op", "input_protocol_op", "input_others_op"]:
+                "input_computer_op", "input_source_op", "input_protocol_op", "input_others_op"] + [
+                   f"select_{k}" for k in SESSION_OPTIONS_SOIL.keys()]:
         CM.update(key, props="readonly", props_remove=is_new)
     CM.update("code_custom", props="disable", props_remove=is_new)
     CM.update("checkbox_st", props="disable", props_remove=is_new)
@@ -1083,6 +1083,30 @@ def _save_notes():
         ui.notify(f'Failed to save {json_path}: {e}', color='negative')
 
 
+PATTERN = re.compile(r'^\[[A-Z][0-9]{0,2}]\s.+$')
+
+
+def _on_change_lc_lu(e):
+    """LUCAS LC and LU format check"""
+    value = e.value or ''
+    if not PATTERN.fullmatch(value):
+        ui.notify(
+            'Invalid format: must be like "[X] Text", "[X1] Text" or "[X11] Text"',
+            color='warning'
+        )
+        # reset selection
+        e.sender.value = "[Z] Not Relevant"
+
+        # rebuild options without the invalid entry
+        new_options = [op for op in e.sender.options if op != value]
+    else:
+        new_options = list(e.sender.options)
+
+    # always sort, no matter valid or not
+    new_options.sort()
+    e.sender.options = new_options
+
+
 ##################
 # FOR EXPERIMENT #
 ##################
@@ -1135,8 +1159,8 @@ def get_session_uuid():
         lics = CM["select_lics"].value
         folder = DATA_DIR / lics / name
         json_path = folder / "session_state.json"
-        with open(json_path, "r") as f:
-            data = json.load(f)
+        with open(json_path, "r") as fs:
+            data = json.load(fs)
         return data["uuid"]
     except:  # noqa
         return ""
@@ -1443,40 +1467,21 @@ def _initialize_session_ui(e):
         ###############
         # Option Card #
         ###############
-        def _create_static_options(key, show_text, full=False):
-            options = ["Unknown"] + SESSION_OPTIONS.get(key, [])
-            CM[f"select_{key}"] = ui.select(
+        def _create_static_options(key_, show_text, full=False, from_dict=SESSION_OPTIONS,
+                                   on_change=None, initial="Not Relevant"):
+            options = from_dict.get(key_, [])
+            CM[f"select_{key_}"] = ui.select(
                 options,
                 label=show_text,
-                value="Unknown",
+                value=initial,
                 with_input=True,
-                new_value_mode="add-unique"
+                new_value_mode="add-unique",
+                on_change=on_change
             ).classes('w-full' if full else "flex-1")
 
         with MyUI.row():
-            with MyUI.cap_card("On-site Conditions", full=False) as card:
-                card.classes('flex-[1]')
-                _create_static_options("weather", "Weather", full=True)
-                _create_static_options("temperature", "Air Temperature", full=True)
-
-            with MyUI.cap_card("Soil Description", full=False) as card:
-                card.classes('flex-[3]')
-                with MyUI.row():
-                    _create_static_options("order", "Soil Order")
-                    _create_static_options("moisture", "Soil Moisture")
-                    _create_static_options("texture", "Soil Texture")
-
-                with MyUI.row():
-                    _create_static_options("agriculture", "Agricultural System")
-                    _create_static_options("crop", "Crop Type")
-                    _create_static_options("cultivation", "Cultivation Method")
-
-        with MyUI.row():
-            ################
-            # GPS Location #
-            ################
             with MyUI.cap_card("GPS Location", full=False) as card:
-                card.classes("flex-[1]")
+                card.classes('flex-[1]')
                 with MyUI.row():
                     lat, lon = get_lics_latlon()
                     CM["number_lat"] = ui.number(
@@ -1488,16 +1493,34 @@ def _initialize_session_ui(e):
                         min=-180, max=180, step=0.01, format='%.2f'
                     ).classes('flex-1')
 
-            #############
-            # Operators #
-            #############
-            with MyUI.cap_card("Operators", full=False) as card:
-                card.classes("flex-[2]")
+            with MyUI.cap_card("On-site Conditions", full=False) as card:
+                card.classes('flex-[1]')
                 with MyUI.row():
-                    CM["input_computer_op"] = ui.input("Computer").classes('flex-1')
-                    CM["input_source_op"] = ui.input("Source").classes('flex-1')
-                    CM["input_protocol_op"] = ui.input("Protocol").classes('flex-1')
-                    CM["input_others_op"] = ui.input("We are just here 🤗").classes('flex-1')
+                    _create_static_options("weather", "Weather", full=False)
+                    _create_static_options("temperature", "Air Temperature", full=False)
+
+        with MyUI.cap_card("Soil/Land Description", full=True):
+            keys = list(SESSION_OPTIONS_SOIL.keys())
+            n_col = 4
+            rows = [keys[i:i + n_col] for i in range(0, len(keys), n_col)]
+            for row in rows:
+                with MyUI.row():
+                    for key in row:
+                        if key in ["LUCAS Land Cover", "LUCAS Land Use"]:
+                            _create_static_options(key, key, full=False, from_dict=SESSION_OPTIONS_SOIL,
+                                                   on_change=_on_change_lc_lu, initial="[Z] Not Relevant")
+                        else:
+                            _create_static_options(key, key, full=False, from_dict=SESSION_OPTIONS_SOIL)
+
+        #############
+        # Operators #
+        #############
+        with MyUI.cap_card("Operators", full=True):
+            with MyUI.row():
+                CM["input_computer_op"] = ui.input("Computer").classes('flex-1')
+                CM["input_source_op"] = ui.input("Source").classes('flex-1')
+                CM["input_protocol_op"] = ui.input("Protocol").classes('flex-1')
+                CM["input_others_op"] = ui.input("We are just here 🤗").classes('flex-1')
 
         # --- Notes Input ---
         CM["input_notes"] = ui.input("Notes").classes('w-full').on("blur", _save_notes)
