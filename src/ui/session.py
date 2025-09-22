@@ -475,6 +475,12 @@ async def _save_session(_=None):
     CM.update("select_session", value=name)
 
 
+def natural_key(s):
+    """Function to sort LUCAS options"""
+    inner = s.strip("[]")
+    return [int(x) if x.isdigit() else x for x in re.split(r'(\d+)', inner)]
+
+
 def _load_session(json_path, input_name):
     """Load session from json"""
     with open(json_path, "r") as fs:
@@ -551,12 +557,13 @@ def _load_session(json_path, input_name):
         for key in SESSION_OPTIONS_SOIL.keys():
             key_var = key.replace(" ", "_").lower()
             initial = "Not Relevant"
-            sort_options = False
             if key in ["LUCAS Land Cover", "LUCAS Land Use"]:
                 initial = "[Z] Not Relevant"
-                sort_options = True
             CM.update(f"select_{key}", data["soil"].get(key_var, initial),
-                      add_value_to_options=True, sort_options=sort_options)
+                      add_value_to_options=True)
+            options = list(CM[f"select_{key}"].options)
+            options.sort(key=natural_key)
+            CM.update(f"select_{key}", options=options)
 
         # Operators
         CM.update("input_computer_op", data["operators"]["computer"])
@@ -1088,23 +1095,19 @@ PATTERN = re.compile(r'^\[[A-Z][0-9]{0,2}]\s.+$')
 
 def _on_change_lc_lu(e):
     """LUCAS LC and LU format check"""
-    value = e.value or ''
-    if not PATTERN.fullmatch(value):
-        ui.notify(
-            'Invalid format: must be like "[X] Text", "[X1] Text" or "[X11] Text"',
-            color='warning'
-        )
-        # reset selection
-        e.sender.value = "[Z] Not Relevant"
-
-        # rebuild options without the invalid entry
-        new_options = [op for op in e.sender.options if op != value]
-    else:
-        new_options = list(e.sender.options)
-
-    # always sort, no matter valid or not
-    new_options.sort()
+    options = [op for op in e.sender.options]
+    new_options = []
+    for op in options:
+        if PATTERN.fullmatch(op):
+            new_options.append(op)
+        else:
+            ui.notify(
+                f'"{op}" has invalid format: must be like "[X] Text", "[X1] Text" or "[X11] Text"',
+                color='warning'
+            )
+    new_options.sort(key=natural_key)
     e.sender.options = new_options
+    e.sender.update()
 
 
 ##################
