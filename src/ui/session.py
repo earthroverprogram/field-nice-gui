@@ -561,9 +561,10 @@ def _load_session(json_path, input_name):
                 initial = "[Z] Not Relevant"
             CM.update(f"select_{key}", data["soil"].get(key_var, initial),
                       add_value_to_options=True)
-            options = list(CM[f"select_{key}"].options)
-            options.sort(key=natural_key)
-            CM.update(f"select_{key}", options=options)
+            if key in ["LUCAS Land Cover", "LUCAS Land Use"]:
+                options = list(CM[f"select_{key}"].options)
+                options.sort(key=natural_key)
+                CM.update(f"select_{key}", options=options)
 
         # Operators
         CM.update("input_computer_op", data["operators"]["computer"])

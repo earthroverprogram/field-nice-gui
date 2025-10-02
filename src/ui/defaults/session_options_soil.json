@@ -1,8 +1,9 @@
 {
   "Moisture": [
     "Dry",
-    "Moist",
+    "Damp",
     "Wet",
+    "Saturated",
     "Not Relevant"
   ],
   "Texture": [
