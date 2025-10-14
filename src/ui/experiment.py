@@ -22,7 +22,7 @@ import tempfile
 import subprocess
 from src.device.datalogger import Datalogger
 from src.ui import GS, DATA_DIR, HELPS
-from src.ui.session import get_session_dict, monitor_device, refresh_device, get_receiver_z, get_session_uuid
+from src.ui.session import get_session_dict, monitor_device, refresh_device, get_receiver_z, get_session_uuid, get_source_array_config
 from src.ui.utils import ControlManager, MyPlot, MyUI, CallbackBlocker, ThreeImageViewer, detect_snuffler, show_help
 
 # --- UI Control Registry ---
@@ -697,10 +697,20 @@ def _on_change_experiment_number(_=None):
         # Load previous with fallback: previous number -> latest creation -> default
         from_previous = _restore_for_new()
 
-        # Source increment
-        if from_previous:
-            CM["number_x"].value += CM["number_inc_x"].value
-            CM["number_y"].value += CM["number_inc_y"].value
+        source_array_config = get_source_array_config()
+        if source_array_config is None:
+            # Source increment
+            if from_previous:
+                CM["number_x"].value += CM["number_inc_x"].value
+                CM["number_y"].value += CM["number_inc_y"].value
+        else:
+            # Apply config
+            index = int(CM['number_experiment'].value) - 1
+            if index < len(source_array_config):
+                CM["number_x"].value = source_array_config[index][0]
+                CM["number_y"].value = source_array_config[index][1]
+            else:
+                pass  # Allow user to have more experiments than config
 
     # Check save
     _check_save()

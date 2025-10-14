@@ -40,7 +40,8 @@
     "excitation": "Hammer",
     "direction": "-Z",
     "coupling": "Plate",
-    "repeats": 5
+    "repeats": 5,
+    "array_config": ""
   },
   "on_site": {
     "weather": "Unknown",

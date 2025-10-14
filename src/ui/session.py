@@ -4,6 +4,7 @@ import time
 import uuid
 import warnings
 from datetime import datetime
+from io import StringIO
 from types import SimpleNamespace
 
 import numpy as np
@@ -434,7 +435,8 @@ async def _save_session(_=None):
             "excitation": CM["select_excitation"].value,
             "direction": CM["select_direction"].value,
             "coupling": CM["select_coupling"].value,
-            "repeats": int(CM["number_repeats"].value)
+            "repeats": int(CM["number_repeats"].value),
+            "array_config": CM["text_source_array_config"].value,
         },
         "gps_location": {
             "latitude": CM["number_lat"].value,
@@ -539,6 +541,11 @@ def _load_session(json_path, input_name):
         CM.update("select_direction", data["source"]["direction"])
         CM.update("select_coupling", data["source"]["coupling"])
         CM.update("number_repeats", data["source"]["repeats"])
+        if "array_config" in data["source"]:
+            CM.update("text_source_array_config", data["source"]["array_config"])
+        else:
+            CM.update("text_source_array_config", "")
+        _on_blur_source_array_config()
 
         # GPS location
         if "gps_location" in data:
@@ -665,6 +672,7 @@ def _on_change_select_session(_=None):
                 "input_naming",
                 "select_device", "select_datatype", "number_device_sr", "number_result_sr", "number_duration",
                 "select_excitation", "select_direction", "select_coupling", "number_repeats",
+                "text_source_array_config",
                 "number_st_x", "number_st_y", "number_st_ch", "input_st_naming",
                 "select_weather", "select_temperature",
                 "number_lat", "number_lon",
@@ -673,6 +681,7 @@ def _on_change_select_session(_=None):
         CM.update(key, props="readonly", props_remove=is_new)
     CM.update("code_custom", props="disable", props_remove=is_new)
     CM.update("checkbox_st", props="disable", props_remove=is_new)
+    CM.update("upload_source_array_config", props="disable", props_remove=is_new)
 
     # 2. Toggle visibility of controls
     CM.update("checkbox_04d", classes="hidden", classes_remove=is_new)
@@ -1111,6 +1120,34 @@ def _on_change_lc_lu(e):
     e.sender.update()
 
 
+def _on_blur_source_array_config(_=None):
+    text = CM["text_source_array_config"].value.strip()
+    if not text:
+        CM["text_source_array_config"].set_value('')
+        CM["source_array_config"] = None
+        return
+    try:
+        a = np.loadtxt(StringIO(text), dtype=int)
+        if a.ndim == 1:
+            assert a.shape[0] == 2, 'Source Array Config must have two values per row'
+            a = a.reshape(1, 2)
+        else:
+            assert a.shape[1] == 2, 'Source Array Config must be a 2D array with two columns'
+        CM["source_array_config"] = a
+        ui.notify(f'Source Array Config OK: shape {a.shape}', type='positive')
+    except Exception as err:
+        CM["text_source_array_config"].set_value('')
+        CM["source_array_config"] = None
+        ui.notify(f'Source Array Config invalid: {err}', type='negative')
+
+
+def _on_upload_source_array_config(e):
+    content = e.content.read().decode("utf-8")
+    CM["text_source_array_config"].set_value(content)
+    _on_blur_source_array_config()
+    ui.notify(f"Loaded {e.name}", type="positive")
+
+
 ##################
 # FOR EXPERIMENT #
 ##################
@@ -1177,6 +1214,10 @@ def get_receiver_z():
     for i, dz in CM["shift_layout_z"].items():
         z[i - 1] = dz
     return z
+
+
+def get_source_array_config():
+    return CM["source_array_config"]
 
 
 ###########################
@@ -1457,16 +1498,33 @@ def _initialize_session_ui(e):
             # Source #
             ##########
             with MyUI.cap_card("Source", full=False, height_px=height_px):
-                CM["select_excitation"] = ui.select(
-                    SESSION_OPTIONS["excitation"], value=SESSION_OPTIONS["excitation"][0],
-                    label="Excitation").classes('w-full')
-                CM["select_direction"] = ui.select(
-                    SESSION_OPTIONS["direction"], value=SESSION_OPTIONS["direction"][-1],
-                    label="Direction").classes('w-full')
-                CM["select_coupling"] = ui.select(
-                    SESSION_OPTIONS["coupling"], value=SESSION_OPTIONS["coupling"][0],
-                    label="Coupling").classes('w-full')
-                CM["number_repeats"] = MyUI.number_int("Repeats", min=1, value=5)
+                with MyUI.row():
+                    CM["select_excitation"] = ui.select(
+                        SESSION_OPTIONS["excitation"], value=SESSION_OPTIONS["excitation"][0],
+                        label="Excitation").classes('flex-1')
+                    CM["select_direction"] = ui.select(
+                        SESSION_OPTIONS["direction"], value=SESSION_OPTIONS["direction"][-1],
+                        label="Direction").classes('flex-1')
+                with MyUI.row():
+                    CM["select_coupling"] = ui.select(
+                        SESSION_OPTIONS["coupling"], value=SESSION_OPTIONS["coupling"][0],
+                        label="Coupling").classes('flex-1')
+                    CM["number_repeats"] = MyUI.number_int("Repeats", min=1, value=5, full=False)
+                CM["source_array_config"] = None
+                with MyUI.row():
+                    CM["text_source_array_config"] = ui.textarea("Source Array Config",
+                                                                 placeholder="Input a matrix with 2 columns, "
+                                                                             "1st for X and 2nd for Y",
+                                                                 ).classes('flex-1').props('rows=5') \
+                        .on("blur", _on_blur_source_array_config)
+
+                    CM["upload_source_array_config"] = ui.upload(
+                        multiple=False,
+                        max_files=1,
+                        auto_upload=True,
+                        on_upload=_on_upload_source_array_config,
+                        label="Load from TXT",
+                    ).props("accept=.txt").classes('flex-1')
 
         ###############
         # Option Card #
