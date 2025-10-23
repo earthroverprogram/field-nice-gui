@@ -115,11 +115,11 @@ class Datalogger:
                     continue  # we'll add Dummy later
 
                 try:
-                    # Quick open test
-                    with sd.InputStream(device=idx, channels=1,
-                                        samplerate=dev["default_samplerate"], dtype="float32",
-                                        blocksize=64):
-                        sd.sleep(20)  # short test, ms
+                    # # Quick open test
+                    # with sd.InputStream(device=idx, channels=1,
+                    #                     samplerate=dev["default_samplerate"], dtype="float32",
+                    #                     blocksize=64):
+                    #     sd.sleep(20)  # short test, ms
 
                     # Create unique key
                     device_key = f"{idx} - {name}"

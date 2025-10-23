@@ -1014,15 +1014,23 @@ async def _record():
     CM["display_countdown_label"].classes(remove="text-[200px]").classes(add="text-[50px]")
     CM["display_countdown_label"].text = "Preparing\nStream..."
 
-    # PREPARE phase
+    # PREPARE phase (timeout-protected)
     try:
-        await asyncio.to_thread(
-            CM["datalogger"].prepare_recording,
-            logical_name,
-            channel_list,
-            datatype,
-            device_samplerate,
+        await asyncio.wait_for(
+            asyncio.to_thread(
+                CM["datalogger"].prepare_recording,
+                logical_name,
+                channel_list,
+                datatype,
+                device_samplerate,
+            ),
+            timeout=5.0,  # seconds — adjust if needed
         )
+    except asyncio.TimeoutError:
+        ui.notify("Hardware took too long to respond."
+                  "Please re-plug and refresh the device.", color="warning")
+        await _reset_ui()
+        return
     except Exception as e:
         ui.notify(f"Failed to prepare recording: {e}", color='negative')
         await _reset_ui()
