@@ -22,7 +22,8 @@ import tempfile
 import subprocess
 from src.device.datalogger import Datalogger
 from src.ui import GS, DATA_DIR, HELPS
-from src.ui.session import get_session_dict, monitor_device, refresh_device, get_receiver_z, get_session_uuid, get_source_array_config
+from src.ui.session import get_session_dict, monitor_device, refresh_device, get_receiver_z, get_session_uuid, \
+    get_source_array_config
 from src.ui.utils import ControlManager, MyPlot, MyUI, CallbackBlocker, ThreeImageViewer, detect_snuffler, show_help
 
 # --- UI Control Registry ---
@@ -834,7 +835,9 @@ def _save_data(data: np.ndarray):
             if rms > 0 and peak / rms < 5:
                 ui.notify(f"Channel {ch_index + 1}: "
                           f"likely ambient noise (no significant peaks)", color="warning")
-    stream.resample(sampling_rate=result_samplerate)  # Resample
+
+    if result_samplerate != device_samplerate:
+        stream.resample(sampling_rate=result_samplerate)  # Resample
 
     # Step 4: Save to MiniSEED
     try:
