@@ -289,7 +289,8 @@ class Datalogger:
             channels=max(self.active_channels) + 1 if self.active_channels else 1,
             device=device_param,
             callback=callback,
-            dtype=datatype
+            dtype=datatype,
+            latency=0.1
         )
 
         return threading.Thread(target=self._stream_runner)
