@@ -271,7 +271,10 @@ class Datalogger:
 
         def callback(indata, frames, time_info, status):  # noqa
             try:
-                selected = indata[:, self.active_channels].copy()
+                if self.active_channels == list(range(indata.shape[1])):
+                    selected = indata.copy()  # shortcut for most applications
+                else:
+                    selected = indata[:, self.active_channels].copy()
                 if self.mode == 'record':
                     self.buffer.append(selected)
                 elif self.mode == 'monitor' and self.on_data:
@@ -290,7 +293,8 @@ class Datalogger:
             device=device_param,
             callback=callback,
             dtype=datatype,
-            latency=0.1
+            blocksize=512,  # ✅ now safe and intentional
+            latency=None  # let CoreAudio pick optimal
         )
 
         return threading.Thread(target=self._stream_runner)
