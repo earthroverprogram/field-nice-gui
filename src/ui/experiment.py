@@ -6,6 +6,7 @@ import shutil
 import time
 import uuid
 import warnings
+from pathlib import Path
 from types import SimpleNamespace
 
 import matplotlib
@@ -654,6 +655,34 @@ def _allocate_new_experiment_number(folder):
     return max(existing) + 1 if existing else 1
 
 
+_timestamp_re = re.compile(r'^preview_(\d+)\.png$')
+
+
+def _find_latest(base: Path) -> Path:
+    """
+    Given e.g.   /.../experiment_0005/preview.png
+    return the newest   preview_*.png   if any exist,
+    otherwise return the original path.
+    """
+    folder = base.parent
+    stem = base.stem  # "preview"
+    suffix = base.suffix  # ".png"
+
+    # collect timestamped files: preview_1234567890.png
+    candidates = []
+    for p in folder.glob(f'{stem}_*{suffix}'):
+        m = _timestamp_re.match(p.name)
+        if m:
+            candidates.append((int(m.group(1)), p))
+
+    if not candidates:
+        return base  # fallback to preview.png
+
+    # pick the one with the largest timestamp
+    _, latest = max(candidates, key=lambda t: t[0])
+    return latest
+
+
 def _on_change_experiment_number(_=None):
     """Handle user changing selected experiment, including loading saved session data."""
     # User used keyboard to clear number
@@ -721,9 +750,9 @@ def _on_change_experiment_number(_=None):
     if number == 1:
         fallbacks[0] = ""  # Number 0 is not allowed
     CM["previewer"].set_images(
-        folder.parent / f"experiment_{number - 1:04d}/preview.png",
-        folder.parent / f"experiment_{number:04d}/preview.png",
-        folder.parent / f"experiment_{number + 1:04d}/preview.png",
+        _find_latest(folder.parent / f"experiment_{number - 1:04d}/preview.png"),
+        _find_latest(folder.parent / f"experiment_{number:04d}/preview.png"),
+        _find_latest(folder.parent / f"experiment_{number + 1:04d}/preview.png"),
         fallbacks=fallbacks, number=number, number_min=1,
         number_max=_allocate_new_experiment_number(folder.parent),
     )
@@ -877,7 +906,9 @@ def _save_data(data: np.ndarray):
         ax.set_title(f"{lics}/{session}/{_number_to_dir(number)}")
         ax.invert_yaxis()  # Make ch=1 on top
         fig.tight_layout(pad=0)
-        fig.savefig(folder / "preview.png", bbox_inches="tight")
+        ts = int(time.time())
+        fname = folder / f"preview_{ts}.png"
+        fig.savefig(fname, bbox_inches="tight")
         fig.clf()
         plt.close(fig)
         plt.style.use('dark_background' if GS.dark_mode else 'default')  # Restore plot theme
