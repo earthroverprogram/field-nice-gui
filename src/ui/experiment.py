@@ -18,7 +18,7 @@ import yaml
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
 from nicegui import ui
-from obspy import Stream, Trace, UTCDateTime
+from obspy import Stream, Trace, UTCDateTime, read
 import tempfile
 import subprocess
 from src.device.datalogger import Datalogger
@@ -758,6 +758,83 @@ def _on_change_experiment_number(_=None):
     )
     data_exist = (folder.parent / f"experiment_{number:04d}/data.mseed").exists()
     CM.update("button_snuffler", props="disable", props_remove=data_exist)
+
+    # 5. Quality check
+    try:
+        def _metric_color(metric_db: float) -> str:
+            # Robust Dynamic Range (dB): larger is better
+            if not np.isfinite(metric_db):
+                return "🔴"
+            if metric_db < 20.0:
+                return "🔴"
+            if metric_db < 40.0:
+                return "🟠"
+            return "🟢"
+
+        def _metric_value(trace, p_high: float = 98.0, p_low: float = 50.0) -> float:
+            """
+            Robust Dynamic Range (dB):
+                20 * log10( p_high(|x|) / p_low(|x|) )
+
+            Designed for short-pulse + long-silence data.
+            Larger is better.
+
+            Parameters
+            ----------
+            p_high : float
+                High percentile of |x| used as robust peak (default 98.0).
+            p_low : float
+                Low percentile of |x| used as robust baseline (default 50.0).
+            """
+            data = np.asarray(trace.data, dtype=float)
+            if data.size == 0:
+                return float("-inf")
+
+            absx = np.abs(data)
+
+            hi = float(np.percentile(absx, p_high))
+            lo = float(np.percentile(absx, p_low))
+
+            if hi <= 0.0:
+                return float("-inf")
+            if lo <= 0.0:
+                # Baseline is (near) zero -> extremely large dynamic range
+                return float("inf")
+
+            return float(20.0 * np.log10(hi / lo))
+
+        mseed_path = folder / "data.mseed"
+        if not mseed_path.exists():
+            CM["text_qa"].value = "New experiment. No traces."
+        else:
+            st = read(str(mseed_path))
+            if len(st) == 0:
+                CM["text_qa"].value = "Impossible Error: `data.mseed` has zero traces."
+            else:
+                metrics = []
+                labels = []
+                for tr in st:
+                    label = f"{tr.stats.network}.{tr.stats.station}.{tr.stats.channel}"
+                    value = float(_metric_value(tr))
+                    metrics.append(value)
+                    labels.append(label)
+
+                mean_metric = float(np.mean(metrics))
+                min_idx = int(np.argmin(metrics))  # worst = smallest dynamic range
+                worst_metric = float(metrics[min_idx])
+                worst_channel = str(labels[min_idx])
+
+                CM["text_qa"].value = (
+                    f"Mean RDR (dB):  {mean_metric:.2f} {_metric_color(mean_metric)}\n"
+                    f"Worst RDR (dB): {worst_metric:.2f} {_metric_color(worst_metric)} ({worst_channel})"
+                )
+
+    except Exception as e:
+        ui.notify(f"Quality check failed: {e}", color="negative")
+        try:
+            CM["text_qa"].value = "QA: ERROR"
+        except Exception:
+            pass
 
 
 def _view_in_snuffler(_=None):
@@ -1533,7 +1610,10 @@ def _initialize_experiment_ui(_=None):
 
             # Snuffler
             with MyUI.row().classes("items-center w-full"):
-                ui.input().classes("flex-1").style('visibility: hidden')
+                CM["text_qa"] = ui.textarea(value="abc\nabc",
+                                            label="Robust Dynamic Range (dB)").classes("flex-1").props('readonly rows=2') \
+                    .props(f'input-style="color: {MyUI.font_color()}; padding-top: 0px; '
+                           'line-height: 1.5"')
                 ui.button(icon='help_outline',
                           on_click=lambda: show_help("Snuffler", HELPS["snuffler"])
                           ).props('flat round size=sm dense')
