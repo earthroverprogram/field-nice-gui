@@ -7,6 +7,7 @@ from math import radians, sin, cos, asin, sqrt
 from pathlib import Path
 
 import numpy as np
+import requests
 from countryinfo import CountryInfo
 from nicegui import ui
 from pycountry import countries, subdivisions
@@ -468,3 +469,65 @@ def show_help(title: str, text: str):
         ui.markdown(text).classes('max-w-lg')
         ui.button('Close', on_click=dialog.close).classes('mt-4')
     dialog.open()
+
+
+def get_weather_temperature(lat: float, lon: float) -> dict:
+    code_desc = {
+        0: "Clear sky",
+        1: "Mainly clear",
+        2: "Partly cloudy",
+        3: "Overcast",
+        45: "Fog",
+        48: "Depositing rime fog",
+        51: "Drizzle: light",
+        53: "Drizzle: moderate",
+        55: "Drizzle: dense",
+        56: "Freezing drizzle: light",
+        57: "Freezing drizzle: dense",
+        61: "Rain: slight",
+        63: "Rain: moderate",
+        65: "Rain: heavy",
+        66: "Freezing rain: light",
+        67: "Freezing rain: heavy",
+        71: "Snow fall: slight",
+        73: "Snow fall: moderate",
+        75: "Snow fall: heavy",
+        77: "Snow grains",
+        80: "Rain showers: slight",
+        81: "Rain showers: moderate",
+        82: "Rain showers: violent",
+        85: "Snow showers: slight",
+        86: "Snow showers: heavy",
+        95: "Thunderstorm: slight or moderate",
+        96: "Thunderstorm with slight hail",
+        99: "Thunderstorm with heavy hail",
+    }
+
+    try:
+        url = "https://api.open-meteo.com/v1/forecast"
+        params = {
+            "latitude": float(lat),
+            "longitude": float(lon),
+            "current": "temperature_2m,weather_code",
+            "timezone": "auto",
+        }
+
+        r = requests.get(url, params=params, timeout=8)
+        r.raise_for_status()
+        j = r.json()
+
+        cur = j.get("current") or {}
+        temp = cur.get("temperature_2m")
+        code = cur.get("weather_code")
+
+        weather = code_desc.get(int(code)) if code is not None else None
+
+        return {
+            "time": cur.get("time"),
+            "timezone": j.get("timezone"),
+            "temperature_c": float(temp) if temp is not None else None,
+            "weather_code": int(code) if code is not None else None,
+            "weather": weather,
+        }
+    except Exception:
+        return {}

@@ -13,7 +13,7 @@ from nicegui import ui
 from src.device.datalogger import Datalogger, DUMMY_SR
 from src.ui import GS, DATA_DIR
 from src.ui.lics import get_lics_uuid, get_lics_latlon
-from src.ui.utils import ControlManager, get_existing_sorted, MyPlot, MyUI, CallbackBlocker
+from src.ui.utils import ControlManager, get_existing_sorted, MyPlot, MyUI, CallbackBlocker, get_weather_temperature
 
 # --- UI Control Registry ---
 CM = ControlManager()
@@ -444,7 +444,7 @@ async def _save_session(_=None):
         },
         "on_site": {
             "weather": CM["select_weather"].value,
-            "temperature": CM["select_temperature"].value,
+            "temperature": CM["input_temperature"].value,
         },
         "soil": {
             key.replace(" ", "_").lower(): CM[f"select_{key}"].value
@@ -558,7 +558,7 @@ def _load_session(json_path, input_name):
 
         # Conditions
         CM.update("select_weather", data["on_site"]["weather"], add_value_to_options=True)
-        CM.update("select_temperature", data["on_site"]["temperature"], add_value_to_options=True)
+        CM.update("input_temperature", data["on_site"]["temperature"])
 
         # Soil description
         for key in SESSION_OPTIONS_SOIL.keys():
@@ -674,7 +674,7 @@ def _on_change_select_session(_=None):
                 "select_excitation", "select_direction", "select_coupling", "number_repeats",
                 "text_source_array_config",
                 "number_st_x", "number_st_y", "number_st_ch", "input_st_naming",
-                "select_weather", "select_temperature",
+                "select_weather", "input_temperature",
                 "number_lat", "number_lon",
                 "input_computer_op", "input_source_op", "input_protocol_op", "input_others_op"] + [
                    f"select_{k}" for k in SESSION_OPTIONS_SOIL.keys()]:
@@ -1220,6 +1220,26 @@ def get_source_array_config():
     return CM["source_array_config"]
 
 
+def _fill_weather_temperature(_=None):
+    lat = CM["number_lat"].value
+    lon = CM["number_lon"].value
+    weather_dict = get_weather_temperature(lat, lon)
+
+    if not weather_dict:
+        ui.notify("Failed to retrieve local weather data", color="negative")
+        return
+
+    weather = weather_dict.get("weather") or "Unknown"
+    temp_c = weather_dict.get("temperature_c")
+
+    CM.update("select_weather", value=weather)
+
+    if temp_c is None:
+        CM.update("input_temperature", value="Unknown")
+    else:
+        CM.update("input_temperature", value=f"{float(temp_c):.1f} °C")
+
+
 ###########################
 # MAIN UI INITIALIZATION  #
 ###########################
@@ -1559,7 +1579,12 @@ def _initialize_session_ui(e):
                 card.classes('flex-[1]')
                 with MyUI.row():
                     _create_static_options("weather", "Weather", full=False)
-                    _create_static_options("temperature", "Air Temperature", full=False)
+                    CM["input_temperature"] = ui.input(
+                        label="Air Temperature",
+                        value="Unknown",
+                    ).classes('flex-1')
+                    CM["button_latlon"] = ui.button(icon="wb_sunny",
+                                                    on_click=_fill_weather_temperature).classes('w-8 h-8')
 
         with MyUI.cap_card("Soil/Land Description", full=True):
             keys = list(SESSION_OPTIONS_SOIL.keys())
