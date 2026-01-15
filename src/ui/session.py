@@ -1,3 +1,4 @@
+import asyncio
 import json
 import re
 import time
@@ -13,6 +14,7 @@ from nicegui import ui
 from src.device.datalogger import Datalogger, DUMMY_SR
 from src.ui import GS, DATA_DIR
 from src.ui.lics import get_lics_uuid, get_lics_latlon
+from src.ui.soil_utils import get_soil_summary
 from src.ui.utils import ControlManager, get_existing_sorted, MyPlot, MyUI, CallbackBlocker, get_weather_temperature
 
 # --- UI Control Registry ---
@@ -1220,24 +1222,41 @@ def get_source_array_config():
     return CM["source_array_config"]
 
 
-def _fill_weather_temperature(_=None):
+async def _fill_weather_soil(_=None):
     lat = CM["number_lat"].value
     lon = CM["number_lon"].value
-    weather_dict = get_weather_temperature(lat, lon)
 
+    ui.notify("Fetching weather + soil properties. This may take a few seconds.", color="primary")
+
+    # Run blocking APIs concurrently in worker threads
+    weather_task = asyncio.create_task(
+        asyncio.to_thread(get_weather_temperature, lat, lon)
+    )
+    soil_task = asyncio.create_task(
+        asyncio.to_thread(get_soil_summary, lat, lon)
+    )
+
+    weather_dict, soil_dict = await asyncio.gather(weather_task, soil_task)
+
+    # --- Weather ---
     if not weather_dict:
         ui.notify("Failed to retrieve local weather data", color="negative")
-        return
-
-    weather = weather_dict.get("weather") or "Unknown"
-    temp_c = weather_dict.get("temperature_c")
-
-    CM.update("select_weather", value=weather)
-
-    if temp_c is None:
-        CM.update("input_temperature", value="Unknown")
     else:
-        CM.update("input_temperature", value=f"{float(temp_c):.1f} °C")
+        weather = weather_dict.get("weather") or "Unknown"
+        temp_c = weather_dict.get("temperature_c")
+
+        CM.update("select_weather", value=weather)
+        if temp_c is None:
+            CM.update("input_temperature", value="Unknown")
+        else:
+            CM.update("input_temperature", value=f"{float(temp_c):.1f} °C")
+
+    # --- Soil ---
+    if not soil_dict:
+        soil_dict = {"texture_class": "Unknown", "wrb_group": "Unknown"}
+
+    CM.update("select_Texture", value=soil_dict.get("texture_class", "Unknown"))
+    CM.update("select_WRB Soil Group", value=soil_dict.get("wrb_group", "Unknown"))
 
 
 ###########################
@@ -1574,6 +1593,11 @@ def _initialize_session_ui(e):
                         "Longitude", value=lon,
                         min=-180, max=180, step=0.01, format='%.2f'
                     ).classes('flex-1')
+                    CM["button_latlon"] = (
+                        ui.button(icon="auto_fix_high", on_click=_fill_weather_soil)
+                        .tooltip("Automatically retrieve available weather and soil conditions")
+                        .classes("w-8 h-8")
+                    )
 
             with MyUI.cap_card("On-site Conditions", full=False) as card:
                 card.classes('flex-[1]')
@@ -1583,8 +1607,6 @@ def _initialize_session_ui(e):
                         label="Air Temperature",
                         value="Unknown",
                     ).classes('flex-1')
-                    CM["button_latlon"] = ui.button(icon="wb_sunny",
-                                                    on_click=_fill_weather_temperature).classes('w-8 h-8')
 
         with MyUI.cap_card("Soil/Land Description", full=True):
             keys = list(SESSION_OPTIONS_SOIL.keys())
