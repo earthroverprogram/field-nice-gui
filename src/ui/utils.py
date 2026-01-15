@@ -3,6 +3,7 @@ import os
 import shutil
 from contextlib import contextmanager
 from datetime import datetime
+from math import radians, sin, cos, asin, sqrt
 from pathlib import Path
 
 import numpy as np
@@ -78,14 +79,45 @@ class ControlManager:
 class CountryUtils:
     """Utility class for country-related operations such as lookup and geolocation."""
 
-    # Mapping of country name to ISO alpha-2 code
     COUNTRIES_DICT = {
-        c.name: c.alpha_2 for c in sorted(list(countries), key=lambda c: c.name)}  # noqa
-    # List of all country names
+        c.name: c.alpha_2
+        for c in sorted(list(countries), key=lambda c: c.name)
+    }
     COUNTRIES_NAMES = list(COUNTRIES_DICT.keys())
 
+    _DATA_PATH = Path("static_data/pycountry_subdivision_latlon.json")
+    _SUB_LATLON = []  # python list [(lat, lon), ...] for JSON build/append
+    _SUB_LATLON_NP = None  # numpy array (N, 2) for fast search
+    _SUB_COUNTRY = []
+    _SUB_NAME = []
+    _LOADED = False
+
+    @classmethod
+    def _load_subdivision_latlon(cls):
+        if cls._LOADED:
+            return
+
+        if not cls._DATA_PATH.exists():
+            raise FileNotFoundError(cls._DATA_PATH)
+
+        with open(cls._DATA_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        for v in data.values():
+            lat = v.get("lat")
+            lon = v.get("lon")
+            if lat is None or lon is None:
+                continue
+            cls._SUB_LATLON.append((float(lat), float(lon)))
+            cls._SUB_COUNTRY.append(v["country"])
+            cls._SUB_NAME.append(v["subdivision"])
+
+        # Build numpy cache once
+        cls._SUB_LATLON_NP = np.asarray(cls._SUB_LATLON, dtype=np.float64)  # shape (N, 2)
+        cls._LOADED = True
+
     @staticmethod
-    def get_subdivisions(country):
+    def get_subdivisions(country: str) -> list[str]:
         """Return list of subdivision names for a given country name."""
         code = CountryUtils.COUNTRIES_DICT.get(country)
         if not code:
@@ -93,16 +125,69 @@ class CountryUtils:
         return [s.name for s in subdivisions if s.country_code == code]  # noqa
 
     @staticmethod
-    def get_latlon(country):
-        """Return (lat, lon) tuple for a country, fallback to (0.0, 0.0) if unavailable."""
+    def get_latlon(country: str, subdivision: str | None = None) -> tuple[float, float]:
+        """
+        Return (lat, lon) for a country + subdivision.
+        Falls back to country center if subdivision not found.
+        """
+        CountryUtils._load_subdivision_latlon()
+
+        if subdivision:
+            for latlon, c, s in zip(
+                    CountryUtils._SUB_LATLON,
+                    CountryUtils._SUB_COUNTRY,
+                    CountryUtils._SUB_NAME,
+            ):
+                if c == country and s == subdivision:
+                    return latlon
+
         try:
             info = CountryInfo(country).info()
-            latlon = info.get("latlng", [])
-            if len(latlon) == 2:
-                return float(latlon[0]), float(latlon[1])
-        except:  # noqa
+            latlng = info.get("latlng")
+            if latlng and len(latlng) == 2:
+                return float(latlng[0]), float(latlng[1])
+        except Exception:
             pass
+
         return 0.0, 0.0
+
+    @staticmethod
+    def get_country_subdivision(lat: float, lon: float) -> tuple[str, str]:
+        """
+        Given lat/lon, return closest (country, subdivision) using vectorized haversine + argmin.
+        """
+        CountryUtils._load_subdivision_latlon()
+
+        pts = CountryUtils._SUB_LATLON_NP
+        if pts is None or pts.size == 0:
+            return "", ""
+
+        # Vectorized haversine: distance from (lat,lon) to all pts
+        r = 6371.0
+        lat1 = np.radians(float(lat))
+        lon1 = np.radians(float(lon))
+
+        lat2 = np.radians(pts[:, 0])
+        lon2 = np.radians(pts[:, 1])
+
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+
+        a = np.sin(dlat / 2.0) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2.0) ** 2
+        d = 2.0 * r * np.arcsin(np.minimum(1.0, np.sqrt(a)))  # (N,)
+
+        idx = int(np.argmin(d))
+        return CountryUtils._SUB_COUNTRY[idx], CountryUtils._SUB_NAME[idx]
+
+    @staticmethod
+    def _haversine(lat1, lon1, lat2, lon2) -> float:
+        """Distance in km (scalar). Kept for potential other use."""
+        r = 6371.0
+        lat1, lon1, lat2, lon2 = map(radians, (lat1, lon1, lat2, lon2))
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+        a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+        return 2 * r * asin(sqrt(a))
 
 
 def get_existing_sorted(directory: Path, prefix: str):

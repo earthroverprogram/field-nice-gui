@@ -1,3 +1,4 @@
+import asyncio
 import json
 import uuid
 from datetime import datetime
@@ -239,36 +240,114 @@ def _on_change_select_lics(_=None):
 # Local Interplay #
 ###################
 
-
 def _on_change_select_country(_=None):
     """Handle update of country: update subdivisions and lat/lon."""
     country = CM["select_country"].value
 
     # --- Subdivisions ---
     sub_list = CountryUtils.get_subdivisions(country)
-    CM.update("select_subdivision",
-              options=sub_list,
-              value=sub_list[0] if sub_list else "")
+    CM.update(
+        "select_subdivision",
+        options=sub_list,
+        value=sub_list[0] if sub_list else "",
+    )
 
-    # --- Lat/Lon ---
-    lat, lon = CountryUtils.get_latlon(country)
+
+def _on_change_select_subdivision(_=None):
+    """Handle update of subdivision: update lat/lon."""
+    country = CM["select_country"].value
+    subdivision = CM["select_subdivision"].value
+    lat, lon = CountryUtils.get_latlon(country, subdivision)
     CM.update("number_lat", value=lat)
     CM.update("number_lon", value=lon)
 
 
-def _fill_lat_lon():
-    """Find lat lon from ip"""
-    try:
-        res = requests.get('http://ip-api.com/json/').json()
-        lat = res.get('lat')
-        lon = res.get('lon')
-        if lat and lon:
-            CM["number_lat"].value = lat
-            CM["number_lon"].value = lon
+# ---------- IP providers (blocking) ----------
+
+def _ipwhois() -> tuple[float, float, str] | None:
+    r = requests.get("https://ipwho.is/", timeout=4)
+    r.raise_for_status()
+    j = r.json()
+    if j.get("success") is False:
+        return None
+    lat, lon = j.get("latitude"), j.get("longitude")
+    city = j.get("city") or ""
+    return (float(lat), float(lon), city.strip()) if lat is not None and lon is not None else None
+
+
+def _ipapi_co() -> tuple[float, float, str] | None:
+    r = requests.get("https://ipapi.co/json/", timeout=4)
+    r.raise_for_status()
+    j = r.json()
+    lat, lon = j.get("latitude"), j.get("longitude")
+    city = j.get("city") or ""
+    return (float(lat), float(lon), city.strip()) if lat is not None and lon is not None else None
+
+
+def _ipinfo() -> tuple[float, float, str] | None:
+    r = requests.get("https://ipinfo.io/json", timeout=4)
+    r.raise_for_status()
+    j = r.json()
+    loc = j.get("loc")
+    if not loc or "," not in loc:
+        return None
+    lat_s, lon_s = loc.split(",", 1)
+    city = j.get("city") or ""
+    return float(lat_s), float(lon_s), city.strip()
+
+
+def _ip_api() -> tuple[float, float, str] | None:
+    r = requests.get("http://ip-api.com/json/", timeout=4)
+    r.raise_for_status()
+    j = r.json()
+    lat, lon = j.get("lat"), j.get("lon")
+    city = j.get("city") or ""
+    return (float(lat), float(lon), city.strip()) if lat is not None and lon is not None else None
+
+
+async def _fill_lat_lon():
+    providers = [_ipwhois, _ipapi_co, _ipinfo, _ip_api]
+    provider_names = ["ipwho.is", "ipapi.co", "ipinfo.io", "ip-api.com"]
+
+    lat = lon = None
+    city = ""
+    used = None
+
+    # Expect providers to return (lat, lon, city) or None
+    for fn, name in zip(providers, provider_names):
+        try:
+            latlon = await asyncio.to_thread(fn)
+            if latlon is not None:
+                lat, lon, city = latlon
+                used = name
+                break
+        except Exception:
+            continue
+
+    if lat is None or lon is None:
+        ui.notify("Failed to get location with IP.", color="negative")
+        return
+
+    country, subdivision = CountryUtils.get_country_subdivision(lat, lon)
+
+    if country:
+        CM.update("select_country", value=country)
+
+        sub_list = CountryUtils.get_subdivisions(country)
+        if sub_list:
+            sub_val = subdivision if subdivision in sub_list else (
+                CM["select_subdivision"].value if CM["select_subdivision"].value in sub_list else sub_list[0])
+            CM.update("select_subdivision", options=sub_list, value=sub_val)
         else:
-            ui.notify('Failed to get location from IP')
-    except Exception as e:
-        ui.notify(f'Error: {e}')
+            CM.update("select_subdivision", options=[], value="")
+
+    CM.update("number_lat", value=lat)
+    CM.update("number_lon", value=lon)
+    if city:
+        CM.update("input_locality", value=city)
+
+    _check_save()
+    ui.notify(f"Location updated by {used}.", color="positive")
 
 
 def _save_notes():
@@ -364,7 +443,8 @@ def initialize():
 
         sub_list = CountryUtils.get_subdivisions(CountryUtils.COUNTRIES_NAMES[0])
         CM["select_subdivision"] = ui.select(
-            sub_list, label="Subdivision").classes('flex-1')
+            sub_list, label="Subdivision",
+            on_change=_on_change_select_subdivision).classes('flex-1')
         CM.update("select_subdivision", value=sub_list[0] if sub_list else "",
                   options=sub_list)
 
