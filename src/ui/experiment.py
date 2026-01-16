@@ -1,4 +1,5 @@
 import asyncio
+import fnmatch
 import json
 import os
 import re
@@ -805,29 +806,44 @@ def _on_change_experiment_number(_=None):
 
         mseed_path = folder / "data.mseed"
         if not mseed_path.exists():
-            CM["text_qa"].value = "New experiment. No traces."
+            CM.update("text_qa", value="New experiment. No traces.", props="rows=1")
         else:
             st = read(str(mseed_path))
             if len(st) == 0:
-                CM["text_qa"].value = "Impossible Error: `data.mseed` has zero traces."
-            else:
-                metrics = []
-                labels = []
-                for tr in st:
-                    label = f"{tr.stats.network}.{tr.stats.station}.{tr.stats.channel}"
-                    value = float(_metric_value(tr))
+                CM.update("text_qa", value="Impossible Error: `data.mseed` has zero traces.", props="rows=1")
+                return
+
+            glob_pattern = (CM["input_qa_wildcard"].value or "").strip()
+
+            metrics = []
+            labels = []
+
+            for tr in st:
+                label = f"{tr.stats.network}.{tr.stats.station}.{tr.stats.channel}"
+                value = float(_metric_value(tr))
+
+                if glob_pattern:
+                    if fnmatch.fnmatchcase(label, glob_pattern):
+                        metrics.append(value)
+                        labels.append(label)
+                else:
                     metrics.append(value)
                     labels.append(label)
 
-                mean_metric = float(np.mean(metrics))
-                min_idx = int(np.argmin(metrics))  # worst = smallest dynamic range
-                worst_metric = float(metrics[min_idx])
-                worst_channel = str(labels[min_idx])
+            if len(metrics) == 0:
+                CM.update("text_qa", value="No traces match glob pattern.", props="rows=1")
+                return
 
-                CM["text_qa"].value = (
-                    f"Mean RDR (dB):  {mean_metric:.2f} {_metric_color(mean_metric)}\n"
-                    f"Worst RDR (dB): {worst_metric:.2f} {_metric_color(worst_metric)} ({worst_channel})"
-                )
+            mean_metric = float(np.mean(metrics))
+            min_idx = int(np.argmin(metrics))  # worst = smallest dynamic range
+            worst_metric = float(metrics[min_idx])
+            worst_channel = str(labels[min_idx])
+
+            value = (
+                f"Mean RDR (dB):  {mean_metric:.2f} {_metric_color(mean_metric)}\n"
+                f"Worst RDR (dB): {worst_metric:.2f} {_metric_color(worst_metric)} ({worst_channel})"
+            )
+            CM.update("text_qa", value=value, props="rows=2")
 
     except Exception as e:
         ui.notify(f"Quality check failed: {e}", color="negative")
@@ -1610,10 +1626,14 @@ def _initialize_experiment_ui(_=None):
 
             # Snuffler
             with MyUI.row().classes("items-center w-full"):
-                CM["text_qa"] = ui.textarea(value="abc\nabc",
-                                            label="Robust Dynamic Range (dB)").classes("flex-1").props('readonly rows=2') \
-                    .props(f'input-style="color: {MyUI.font_color()}; padding-top: 0px; '
-                           'line-height: 1.5"')
+                with ui.column().classes('flex-1 gap-1'):
+                    CM["input_qa_wildcard"] = ui.input("Channel Wildcard",
+                                                       on_change=_on_change_experiment_number).classes("w-full")
+                    CM["text_qa"] = ui.textarea(value="XXX",
+                                                label="Robust Dynamic Range (dB)").classes("w-full").props(
+                        'readonly rows=1') \
+                        .props(f'input-style="color: {MyUI.font_color()}; padding-top: 0px; '
+                               'line-height: 1.5"')
                 ui.button(icon='help_outline',
                           on_click=lambda: show_help("Snuffler", HELPS["snuffler"])
                           ).props('flat round size=sm dense')
