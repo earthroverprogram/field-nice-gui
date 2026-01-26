@@ -1252,6 +1252,7 @@ def _on_change_edit_snuffler(_=None):
     """User edit snuffler path."""
     if (CM["input_path_snuffler"].value.endswith("snuffler") or
             CM["input_path_snuffler"].value.endswith("snuffler.exe")):
+        _save_option("input_path_snuffler_value", CM["input_path_snuffler"].value)
         return
     CM["input_path_snuffler"].value = detect_snuffler()
 
@@ -1641,7 +1642,8 @@ def _initialize_experiment_ui(_=None):
                     CM["button_snuffler"] = ui.button("View in Snuffler", on_click=_view_in_snuffler) \
                         .classes('text-white font-semibold h-14 w-full')
                 ui.button(icon='help_outline').props('flat round size=sm dense').style('visibility: hidden')
-                CM["input_path_snuffler"] = ui.input("Full Path to Snuffler", value=detect_snuffler()) \
+                CM["input_path_snuffler"] = ui.input("Full Path to Snuffler", value=
+                _load_option("input_path_snuffler_value", default=detect_snuffler())) \
                     .classes('flex-1').on("blur", _on_change_edit_snuffler)
 
     # Safe call
